@@ -2,25 +2,30 @@
 % Please edit documentation in R/PRISM.R
 \name{PRISM}
 \alias{PRISM}
-\title{PRISM: Patient Responder Identifier for Stratified Medicine}
+\title{PRISM: Patient Response Identifier for Stratified Medicine}
 \usage{
 PRISM(Y, A, X, Xtest = NULL, family = "gaussian",
   filter = "filter_glmnet", ple = NULL, submod = NULL,
   param = NULL, alpha_ovrl = 0.05, alpha_s = 0.05,
   filter.hyper = NULL, ple.hyper = NULL, submod.hyper = NULL,
-  submod2X = FALSE, param.hyper = NULL, prefilter_resamp = FALSE,
-  resample = NULL, stratify = TRUE, R = 100, filter.resamp = NULL,
+  param.hyper = NULL, prefilter_resamp = FALSE, resample = NULL,
+  stratify = TRUE, R = 100, filter.resamp = NULL,
   ple.resamp = NULL, submod.resamp = NULL, verbose = TRUE,
   verbose.resamp = FALSE)
 }
 \arguments{
 \item{Y}{The outcome variable. Must be numeric or survival (ex; Surv(time,cens) )}
 
-\item{A}{Treatment variable. (a=1,...A)}
+\item{A}{Treatment variable. (ex: a=1,...,A or a="control","new")}
 
-\item{X}{Covariate matrix. Must be numeric.}
+\item{X}{Covariate space. Variables types (ex: numeric, factor, ordinal) should be set
+to align with subgroup model (submod argument). For example, for lmtree, binary variables
+coded as numeric (ex: 0, 1) are treated differently than the corresponding factor version
+(ex: "A", "B"). Filter and PLE models provided in the StratifiedMedicine package can
+accomodate all variable types.}
 
-\item{Xtest}{Test set. Default is NULL which uses X (training set)}
+\item{Xtest}{Test set. Default is NULL which uses X (training set). Variable types should
+match X.}
 
 \item{family}{Outcome type. Options include "gaussion" (default), "binomial", and "survival".}
 
@@ -50,9 +55,6 @@ perform inference through the input function (by name). Default for "gaussian"/"
 
 \item{submod.hyper}{Hyper-parameters for the SubMod function (must be list). Default is NULL.}
 
-\item{submod2X}{Option to perform "double" subgroup identification; run SubMod once,
-rank them into ordinal groups, re-run Submod (BETA). Default=FALSE}
-
 \item{param.hyper}{Hyper-parameters for the Param function (must be list). Default is NULL.}
 
 \item{prefilter_resamp}{Option to filter the covariate space (based on filter model) prior
@@ -76,25 +78,23 @@ Options include "Boostrap" and "Permutation." Default=NULL (No resampling).}
 \item{verbose.resamp}{Output iterations during resampling? Default=FALSE}
 }
 \value{
-Return Filter, PLE, SubMod, and Param outputs.
+Trained PRISM object. Includes filter, ple, submod, and param outputs.
  \itemize{
-  \item mu_train - Patient-level estimates (train)
-  \item mu_test - Patient-level estimates (test)
   \item filter.mod - Filter model
   \item filter.vars - Variables remaining after filtering
-  \item Sub.mod - Subgroup model
+  \item ple.fit - Fitted ple model (model fit, other fit outputs)
+  \item mu_train - Patient-level estimates (train)
+  \item mu_test - Patient-level estimates (test)
+  \item submod.fit - Fitted submod model (model fit, other fit outputs)
   \item out.train - Training data-set with identified subgroups
   \item out.test - Test data-set with identified subgroups
-  \item Subpred.train - Training predictions (based on SubMod)
-  \item Subpred.test - Test predictions (based on SubMod)
   \item Rules - Subgroup rules / definitions
-  \item param.dat - Parameter estimates and variablity metrics
+  \item param.dat - Parameter estimates and variablity metrics (depends on param)
   \item resamp.dist - Resampling distributions (NULL if no resampling is done)
-  \item Rules - Subgroups rules/definitions
 }
 }
 \description{
-PRISM algorithm. Given a data-set of (Y, X, A) (Outcome, covariates, treatment),
+PRISM algorithm. Given a data-set of (Y, A, X) (Outcome, treatment, covariates),
 the \code{PRISM} identifies potential subgroup along with point and variability metrics.
 This four step procedure (filter, ple, submod, param) is flexible and accepts user-inputs
 at each step.
@@ -112,10 +112,17 @@ A = dat_ctns$A
 
 # Run Default: filter_glmnet, ple_ranger, submod_lmtree, param_ple #
 res0 = PRISM(Y=Y, A=A, X=X)
-hist(res0$mu_train$PLE) # distribution of PLEs
-plot(res0$Sub.mod) # Plot of subgroup model
+res0$filter.vars # variables that pass the filter
+plot(res0, type="PLE:density") # distribution of PLEs
+plot(res0, type="PLE:waterfall") # PLE waterfall plot
+plot(res0$submod.fit$mod) # Plot of subgroup model
 res0$param.dat # overall/subgroup specific parameter estimates/inference
 plot(res0) # Forest plot: overall/subgroup specific parameter estimates (CIs)
+
+# Without filtering #
+res1 = PRISM(Y=Y, A=A, X=X, filter=NULL)
+plot(res1$submod.fit$mod)
+plot(res1)
 
 ## With bootstrap (No filtering) ##
 \donttest{
@@ -126,20 +133,21 @@ plot(res0) # Forest plot: overall/subgroup specific parameter estimates (CIs)
 }
 
 # Survival Data ##
-# Load TH.data (no treatment; generate treatment randomly to simulate null effect) ##
 \donttest{
   library(survival)
+  require(TH.data); require(coin)
   data("GBSG2", package = "TH.data")
   surv.dat = GBSG2
   # Design Matrices ###
   Y = with(surv.dat, Surv(time, cens))
   X = surv.dat[,!(colnames(surv.dat) \%in\% c("time", "cens")) ]
+  set.seed(513)
   A = rbinom( n = dim(X)[1], size=1, prob=0.5  )
 
   # Default: PRISM: glmnet ==> MOB (Weibull) ==> Cox; bootstrapping posterior prob/inference #
   res_weibull1 = PRISM(Y=Y, A=A, X=X, ple=NULL, resample="Bootstrap", R=100,
                        verbose.resamp = TRUE)
-  plot(res_weibull1$Sub.mod)
+  plot(res_weibull1$submod.fit$mod)
   plot(res_weibull1)
   plot(res_weibull1, type="resample")+geom_vline(xintercept = 1)
   aggregate(I(est<1)~Subgrps, data=res_weibull1$resamp.dist, FUN="mean")
@@ -147,7 +155,7 @@ plot(res0) # Forest plot: overall/subgroup specific parameter estimates (CIs)
   # PRISM: ENET ==> CTREE ==> Cox; bootstrapping for posterior prob/inference #
   res_ctree1 = PRISM(Y=Y, A=A, X=X, ple=NULL, submod = "submod_ctree",
                      resample="Bootstrap", R=100, verbose.resamp = TRUE)
-  plot(res_ctree1$Sub.mod)
+  plot(res_ctree1$submod.fit$submod.fit$mod)
   plot(res_ctree1)
   plot(res_ctree1, type="resample")+geom_vline(xintercept = 1)
   aggregate(I(est<1)~Subgrps, data=res_ctree1$resamp.dist, FUN="mean")

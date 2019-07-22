@@ -11,7 +11,7 @@ ple_glmnet(Y, A, X, Xtest, lambda = "lambda.min", family, ...)
 
 \item{A}{Treatment variable. (a=1,...A)}
 
-\item{X}{Covariate matrix. Must be numeric.}
+\item{X}{Covariate space.}
 
 \item{Xtest}{Test set}
 
@@ -23,18 +23,16 @@ ple_glmnet(Y, A, X, Xtest, lambda = "lambda.min", family, ...)
 \item{...}{Any additional parameters, not currently passed through.}
 }
 \value{
-Patient-level estimates (E(Y|X,1), E(Y|X,0), E(Y|X,1)-E(Y|X,0)) or
- (HR(X,1), HR(X,0), HR(X,1)-HR(X,0)) for train/test sets.
+Trained glmnet model(s).
  \itemize{
   \item mods - trained model(s)
-  \item mu_train - Patient-level estimates (training set)
-  \item mu_test - Patient-level estimates (test set)
+  \item lambda - Lambda used for elastic-net (passes to prediction function)
+  \item X - Covariate Space (in model matrix form)
 }
 }
 \description{
-Uses the elastic net (glmnet R package) to obtain patient-level estimates.
-For continuous/binary, output estimates of E(Y|X,A=a) and E(Y|X,A=1)-E(Y|X,A=0) (PLE).
-For survival, output estimates of HR(X,A=a) and HR(X, A=1)-HR(X, A=0) (PLE).
+Uses the elastic net (glmnet R package) to obtain patient-level estimates. Usable for
+continuous, binary, or survival outcomes.
 }
 \examples{
 library(StratifiedMedicine)
@@ -48,8 +46,4 @@ A = dat_ctns$A
 mod1 = ple_glmnet(Y, A, X, Xtest=X, family="gaussian")
 summary(mod1$mu_train$PLE)
 
-
-}
-\seealso{
-\code{\link{PRISM}}, \code{\link{glmnet}}
 }

@@ -11,7 +11,7 @@ ple_bart(Y, A, X, Xtest, family = "gaussian", ...)
 
 \item{A}{Treatment variable. (a=1,...A)}
 
-\item{X}{Covariate matrix. Must be numeric.}
+\item{X}{Covariate space.}
 
 \item{Xtest}{Test set}
 
@@ -20,7 +20,8 @@ ple_bart(Y, A, X, Xtest, family = "gaussian", ...)
 \item{...}{Any additional parameters, not currently passed through.}
 }
 \value{
-Patient-level estimates (E(Y|X,1), E(Y|X,0), E(Y|X,1)-E(Y|X,0)) for train/test sets.
+Trained BART model(s) and patient-level estimates
+(E(Y|X,1), E(Y|X,0), E(Y|X,1)-E(Y|X,0)) for train/test sets.
  \itemize{
   \item mods - trained model(s)
   \item mu_train - Patient-level estimates (training set)
@@ -28,9 +29,9 @@ Patient-level estimates (E(Y|X,1), E(Y|X,0), E(Y|X,1)-E(Y|X,0)) for train/test s
 }
 }
 \description{
-Uses the BART algorithm (from BART R package) to obtain patient-level estimates.
-Used for continuous or binary outcomes, with output estimates of
-E(Y|X,A=a) and E(Y|X,A=1)-E(Y|X,A=0) (PLE). In progress.
+Uses the BART algorithm (Chipman et al 2010; BART R package) to obtain patient-level
+estimates. Used for continuous or binary outcomes. Covariate by treatment interactions
+are automatically included in BART model (as in Hahn et al 2017).
 }
 \examples{
 library(StratifiedMedicine)
@@ -44,12 +45,11 @@ train = data.frame(Y, A, X)
 
 # BART #
 \donttest{
-mod1 = ple_bart(train=train, Xtest=X)
-
-summary(mod1$mu_train$PLE)
+require(BART)
+mod1 = ple_bart(Y, A, X, Xtest=X)
+summary(mod1$mu_train)
+summary(predict(mod1, newdata=X))
 }
 
-}
-\seealso{
-\code{\link{PRISM}}, \code{\link{BART}}
+
 }

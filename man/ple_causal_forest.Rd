@@ -5,14 +5,14 @@
 \title{Patient-level Estimates: Causal Forest}
 \usage{
 ple_causal_forest(Y, A, X, Xtest, tune = FALSE, num.trees = 500,
-  family = "gaussian", ...)
+  family = "gaussian", mod.A = "mean", ...)
 }
 \arguments{
 \item{Y}{The outcome variable. Must be numeric or survival (ex; Surv(time,cens) )}
 
 \item{A}{Treatment variable. (a=1,...A)}
 
-\item{X}{Covariate matrix. Must be numeric.}
+\item{X}{Covariate space.}
 
 \item{Xtest}{Test set}
 
@@ -22,20 +22,20 @@ ple_causal_forest(Y, A, X, Xtest, tune = FALSE, num.trees = 500,
 
 \item{family}{Outcome type ("gaussian", "binomial"), default is "gaussian"}
 
+\item{mod.A}{Model for estimating P(A|X). Default is "mean" calculates the sample mean.
+If mod.A="RF", estimate P(A|X) using regression_forest (applicable for non-RCTs).}
+
 \item{...}{Any additional parameters, not currently passed through.}
 }
 \value{
-Patient-level estimates (E(Y|X,1), E(Y|X,0), E(Y|X,1)-E(Y|X,0)) for train/test sets.
+Trained causal_forest and regression_forest models.
  \itemize{
   \item mods - trained model(s)
-  \item mu_train - Patient-level estimates (training set)
-  \item mu_test - Patient-level estimates (test set)
 }
 }
 \description{
-Uses the causal forest algorithm (grf R package) to obtain patient-level estimates.
-Used for continuous or binary outcomes, with output estimates of
-E(Y|X,A=a) and E(Y|X,A=1)-E(Y|X,A=0) (PLE).
+Uses the causal forest algorithm (Athey, Tibshirani, and Wager 2019; grf R package) to
+obtain patient-level estimates. Used for continuous or binary outcomes.
 }
 \examples{
 library(StratifiedMedicine)
@@ -45,22 +45,13 @@ dat_ctns = generate_subgrp_data(family="gaussian")
 Y = dat_ctns$Y
 X = dat_ctns$X
 A = dat_ctns$A
-train = data.frame(Y, A, X)
-# Outcome/treatment must be labeled as Y/A #
 
 \donttest{
-# Default #
-mod1 = ple_causal_forest(train=train, Xtest=X)
-summary(mod1$mu_train$PLE)
-
-# Tune hyper-parameters (uncomment to run) #
-mod2 = ple_causal_forest(train=train, Xtest=X, tune=TRUE)
-summary(mod2$mu_train$PLE)
+require(grf)
+mod1 = ple_causal_forest(Y, A, X, Xtest=X)
+summary(mod1$mu_train)
 
 }
 
 
-}
-\seealso{
-\code{\link{PRISM}}, \code{\link{causal_forest}}
 }

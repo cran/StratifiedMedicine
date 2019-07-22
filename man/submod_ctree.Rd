@@ -2,7 +2,7 @@
 % Please edit documentation in R/submod_ctree.R
 \name{submod_ctree}
 \alias{submod_ctree}
-\title{Subgroup Identification: Conditional Inference Trees (CTREE)}
+\title{Subgroup Identification: Conditional Inference Trees (ctree)}
 \usage{
 submod_ctree(Y, A, X, Xtest, mu_train, minbucket = floor(dim(X)[1] *
   0.05), maxdepth = 4, outcome_PLE = FALSE, family = "gaussian", ...)
@@ -12,7 +12,7 @@ submod_ctree(Y, A, X, Xtest, mu_train, minbucket = floor(dim(X)[1] *
 
 \item{A}{Treatment variable. (a=1,...A)}
 
-\item{X}{Covariate matrix. Must be numeric.}
+\item{X}{Covariate space.}
 
 \item{Xtest}{Test set}
 
@@ -30,18 +30,14 @@ Default = floor( dim(train)[1]*0.05  )}
 \item{...}{Any additional parameters, not currently passed through.}
 }
 \value{
-CTREE model, predictions, and identified subgroups.
+Trained ctree model.
  \itemize{
-  \item mod - CTREE model object
-  \item Subgrps.train - Identified subgroups (training set)
-  \item Subgrps.test - Identified subgroups (test set)
-  \item pred.train - Predictions (training set)
-  \item pred.test - Predictions (test set)
+  \item mod - ctree model object
 }
 }
 \description{
-Uses the CTREE (conditional inference trees) algorithm to identify subgroups.
-Usable for continuous and binary outcomes.
+Uses the ctree (conditional inference trees) algorithm to identify subgroups
+(Hothorn, Hornik, Zeileis 2006). Usable for continuous, binary, or survival outcomes.
 Option to use the observed outcome or PLEs for subgroup identification.
 }
 \examples{
@@ -58,15 +54,5 @@ res_ctree2 = submod_ctree(Y, A, X, Xtest=X, family="gaussian", maxdepth=2, minsi
 plot(res_ctree1$mod)
 plot(res_ctree2$mod)
 
-# Survival #
-dat_surv = generate_subgrp_data(family="survival")
-Y = dat_surv$Y
-X = dat_surv$X
-A = dat_surv$A
-res_ctree3 = submod_ctree(Y, A, X, Xtest=X, family="survival")
-plot(res_ctree3$mod)
 
-}
-\seealso{
-\code{\link{PRISM}}, \code{\link{ctree}}
 }

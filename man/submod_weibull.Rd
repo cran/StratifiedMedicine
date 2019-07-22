@@ -12,7 +12,7 @@ submod_weibull(Y, A, X, Xtest, mu_train, minsize = floor(dim(X)[1] *
 
 \item{A}{Treatment variable. (a=1,...A)}
 
-\item{X}{Covariate matrix. Must be numeric.}
+\item{X}{Covariate space.}
 
 \item{Xtest}{Test set}
 
@@ -26,18 +26,15 @@ Default = floor( dim(train)[1]*0.05  )}
 \item{...}{Any additional parameters, not currently passed through.}
 }
 \value{
-MOB (Weibull) model, predictions, and identified subgroups.
+Trained MOB (Weibull) model.
  \itemize{
   \item mod - MOB (Weibull) model object
-  \item Subgrps.train - Identified subgroups (training set)
-  \item Subgrps.test - Identified subgroups (test set)
-  \item pred.train - Predictions (training set)
-  \item pred.test - Predictions (test set)
 }
 }
 \description{
-Uses the MOB (with weibull loss function) algorithm to identify subgroups.
-Usable for survival outcomes.
+Uses the MOB (with weibull loss function) algorithm to identify subgroups
+(Zeileis, Hothorn, Hornik 2008; Seibold, Zeileis, Hothorn 2016). Usable for
+survival outcomes.
 }
 \examples{
 library(StratifiedMedicine)
@@ -55,7 +52,5 @@ res_weibull = submod_weibull(Y, A, X, Xtest=X, family="survival")
 plot(res_weibull$mod)
 }
 
-}
-\seealso{
-\code{\link{PRISM}}, \code{\link{mob}}
+
 }

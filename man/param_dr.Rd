@@ -11,7 +11,7 @@ param_dr(Y, A, X, mu_hat, Subgrps, alpha_ovrl, alpha_s, ...)
 
 \item{A}{Treatment variable. (a=1,...A)}
 
-\item{X}{Covariate matrix. Must be numeric.}
+\item{X}{Covariate space.}
 
 \item{mu_hat}{Patient-level estimates (See PLE_models)}
 
@@ -25,15 +25,17 @@ param_dr(Y, A, X, mu_hat, Subgrps, alpha_ovrl, alpha_s, ...)
 }
 \value{
 Data-set with parameter estimates (average treatment effect) and corresponding
-variability metrics, for overall and subgroups.
+variability metrics, for overall and subgroups. Subgrps=0 corresponds to the overall
+population by default.
  \itemize{
-  \item param.dat - Parameter estimates and variability metrics.
-  By convention, Subgrps=0 corresponds to overall population.
+  \item param.dat - Parameter estimates and variability metrics (est, SE,
+  LCL/UCL = lower/upper confidence limits, pval = p-value).
   }
 }
 \description{
-For each identified subgroups and in the overall population, use the double robust estimator.
-Usable for continuous and binary outcomes.
+For each identified subgroup and in the overall population, use the double robust
+estimator (Funk et al 2011). Usable for continuous and binary outcomes, specifically
+for the estimand E(Y|X,A=1)-E(Y|X,A=0).
 }
 \examples{
 library(StratifiedMedicine)
@@ -45,10 +47,10 @@ X = dat_ctns$X
 A = dat_ctns$A
 
 ## Estimate PLEs (ranger) ##
-res_ranger = ple_ranger(Y, A, X, Xtest=X)
+res_ranger = ple_train(Y, A, X, Xtest=X, ple="ple_ranger")
 
 ## Identify Subgroups: MOB (lmtree) ##
-res_lmtree = submod_lmtree(Y, A, X, Xtest=X)
+res_lmtree = submod_train(Y, A, X, Xtest=X, submod="submod_lmtree")
 
 ## Parameter-estimation ##
 params = param_dr(Y, A, X, mu_hat = res_ranger$mu_train,

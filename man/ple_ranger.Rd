@@ -12,7 +12,7 @@ ple_ranger(Y, A, X, Xtest, byTrt = 1, min.node.pct = 0.1,
 
 \item{A}{Treatment variable. (a=1,...A)}
 
-\item{X}{Covariate matrix. Must be numeric.}
+\item{X}{Covariate space.}
 
 \item{Xtest}{Test set}
 
@@ -26,20 +26,19 @@ with covariate space (X, A, X*A)}
 \item{...}{Any additional parameters, not currently passed through.}
 }
 \value{
-Patient-level estimates (E(Y|X,1), E(Y|X,0), E(Y|X,1)-E(Y|X,0)) for train/test sets.
+Trained random forest (ranger) model(s).
  \itemize{
   \item mods - trained model(s)
-  \item mu_train - Patient-level estimates (training set)
-  \item mu_test - Patient-level estimates (test set)
+  \item A - treatment variable (training set)
+  \item X - covariate space (training set)
 }
 }
 \description{
-Estimate patient-level estimates (PLEs) through treatment-specific
-(or with explicit X*A interactions) random forest models (ranger).
-Used for continuous or binary outcomes, with output estimates of E(Y|X,A=a) and
-E(Y|X,A=1)-E(Y|X,A=0) (PLE).
+Uses treatment-specific (or with explicit X*A interactions) random forest models (ranger)
+to obtain patient-level estimates. Used for continuous, binary, or survival outcomes.
 }
 \examples{
+\donttest{
 library(StratifiedMedicine)
 ## Continuous ##
 dat_ctns = generate_subgrp_data(family="gaussian")
@@ -47,17 +46,12 @@ Y = dat_ctns$Y
 X = dat_ctns$X
 A = dat_ctns$A
 
-\donttest{
-# Default (treatment-specific ranger models) #
+# Counter-factual Random Forest (treatment-specific ranger models) #
 mod1 = ple_ranger(Y, A, X, Xtest=X)
-summary(mod1$mu_train$PLE)
+summary( predict(mod1, newdata=data.frame(A,X) ) ) # oob predictions for training
+summary( predict(mod1, newdata=data.frame(X) ) ) # new-predictions, no oob here
 
-# Generate A*X covariates (single ranger model) #
-mod2 = ple_ranger(Y, A, X, Xtest=X, byTrt=0)
-summary(mod2$mu_train$PLE)
 }
-
-## Survival (TBD) ##
 
 }
 \seealso{

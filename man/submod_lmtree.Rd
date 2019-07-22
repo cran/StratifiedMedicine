@@ -12,7 +12,7 @@ submod_lmtree(Y, A, X, Xtest, mu_train, minsize = floor(dim(X)[1] *
 
 \item{A}{Treatment variable. (a=1,...A)}
 
-\item{X}{Covariate matrix. Must be numeric.}
+\item{X}{Covariate space.}
 
 \item{Xtest}{Test set}
 
@@ -26,18 +26,14 @@ Default = floor( dim(train)[1]*0.05  )}
 \item{...}{Any additional parameters, not currently passed through.}
 }
 \value{
-lmtree model, predictions, and identified subgroups.
+Trained lmtree model.
  \itemize{
   \item mod - lmtree model object
-  \item Subgrps.train - Identified subgroups (training set)
-  \item Subgrps.test - Identified subgroups (test set)
-  \item pred.train - Predictions (training set)
-  \item pred.test - Predictions (test set)
 }
 }
 \description{
-Uses the lmtree (model-based partitioning, OLS) algorithm to identify subgroups.
-Usable for continuous and binary outcomes.
+Uses the lmtree (model-based partitioning, OLS) algorithm to identify subgroups
+(Zeileis, Hothorn, Hornik 2008). Usable for continuous and binary outcomes.
 }
 \examples{
 library(StratifiedMedicine)
@@ -55,7 +51,5 @@ res_lmtree2 = submod_lmtree(Y, A, X, Xtest=X, maxdepth=2, minsize=100)
 plot(res_lmtree1$mod)
 plot(res_lmtree2$mod)
 
-}
-\seealso{
-\code{\link{PRISM}}, \code{\link{lmtree}}
+
 }
