@@ -38,7 +38,7 @@ devtools::install_github("thomasjemielita/StratifiedMedicine")
 Example: Continuous Outcome with Binary Treatment
 -------------------------------------------------
 
-Suppose the estimand or question of interest is the average treatment effect, *θ*<sub>0</sub> = *E*(*Y*|*A* = 1)−*E*(*Y*|*A* = 0). The goal is to understand whether there is any treatment heterogeneity across patients and if there are any distinct subgroups with similar responses.
+Suppose the estimand or question of interest is the average treatment effect, *θ*<sub>0</sub> = *E*(*Y*|*A* = 1)−*E*(*Y*|*A* = 0). The goal is to understand whether there is any treatment heterogeneity across patients and if there are any distinct subgroups with similar responses. In this example, we simulate continuous data where roughly 30% of the patients receive no treatment-benefit for using *A* = 1 vs *A* = 0. Responders vs non-responders are defined by the continuous predictive covariates *X*<sub>1</sub> and *X*<sub>2</sub> for a total of four subgroups. Subgroup treatment effects are: *θ*<sub>1</sub> = 0 (*X*<sub>1</sub> ≤ 0, *X*<sub>2</sub> ≤ 0), *θ*<sub>2</sub> = 0.25(*X*<sub>1</sub> &gt; 0, *X*<sub>2</sub> ≤ 0), *θ*<sub>3</sub> = 0.45(*X*<sub>1</sub> ≤ 0, *X*2 &gt; 0), *θ*<sub>4</sub> = 0.65(*X*<sub>1</sub> &gt; 0, *X*<sub>2</sub> &gt; 0).
 
 ``` r
 library(StratifiedMedicine)
@@ -77,12 +77,38 @@ plot(res0$submod.fit$mod)
 ``` r
 ## Overall/subgroup specific parameter estimates/inference
 res0$param.dat
-#>   Subgrps   N       est         SE         LCL       UCL        pval
-#> 1       0 800 0.2002288 0.07625826  0.05053855 0.3499190 0.008813376
-#> 2       3 149 0.1639289 0.19134782 -0.21419779 0.5420557 0.392992087
-#> 3       4 277 0.1367610 0.11828108 -0.09608672 0.3696087 0.248583996
-#> 4       6 267 0.2207054 0.12863914 -0.03257507 0.4739859 0.087382447
-#> 5       7 107 0.3639856 0.23182371 -0.09562749 0.8235986 0.119373067
+#>    Subgrps   N          estimand        est         SE         LCL
+#> 1        0 800          E(Y|A=0) 1.63776866 0.04569877  1.54806484
+#> 2        0 800          E(Y|A=1) 1.84286992 0.04866618  1.74734124
+#> 3        0 800 E(Y|A=1)-E(Y|A=0) 0.20510125 0.06328619  0.08087441
+#> 4        3 149          E(Y|A=0) 1.28263595 0.11176578  1.06177307
+#> 5        3 149          E(Y|A=1) 1.31794039 0.10980919  1.10094399
+#> 6        3 149 E(Y|A=1)-E(Y|A=0) 0.03530445 0.15439447 -0.26979794
+#> 7        4 277          E(Y|A=0) 1.60937815 0.06712763  1.47723094
+#> 8        4 277          E(Y|A=1) 1.67799950 0.07693142  1.52655259
+#> 9        4 277 E(Y|A=1)-E(Y|A=0) 0.06862135 0.10088192 -0.12997442
+#> 10       6 267          E(Y|A=0) 1.70388830 0.07873786  1.54885957
+#> 11       6 267          E(Y|A=1) 2.00040347 0.07843103  1.84597887
+#> 12       6 267 E(Y|A=1)-E(Y|A=0) 0.29651517 0.10890629  0.08208715
+#> 13       7 107          E(Y|A=0) 2.04080610 0.13504592  1.77306443
+#> 14       7 107          E(Y|A=1) 2.60756289 0.11565560  2.37826441
+#> 15       7 107 E(Y|A=1)-E(Y|A=0) 0.56675679 0.17669715  0.21643749
+#>          UCL          pval
+#> 1  1.7274725 1.879424e-168
+#> 2  1.9383986 1.723772e-180
+#> 3  0.3293281  1.241074e-03
+#> 4  1.5034988  3.314673e-22
+#> 5  1.5349368  1.324710e-23
+#> 6  0.3404068  8.194458e-01
+#> 7  1.7415254  1.972697e-69
+#> 8  1.8294464  5.334423e-62
+#> 9  0.2672171  4.969388e-01
+#> 10 1.8589170  1.363658e-60
+#> 11 2.1548281  2.029409e-73
+#> 12 0.5109432  6.903964e-03
+#> 13 2.3085478  3.359840e-28
+#> 14 2.8368614  3.054161e-42
+#> 15 0.9170761  1.770848e-03
 ## Forest plot: Overall/subgroup specific parameter estimates (CIs)
 plot(res0, type="forest")
 ```

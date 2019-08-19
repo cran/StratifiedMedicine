@@ -11,7 +11,7 @@ PRISM(Y, A, X, Xtest = NULL, family = "gaussian",
   param.hyper = NULL, prefilter_resamp = FALSE, resample = NULL,
   stratify = TRUE, R = 100, filter.resamp = NULL,
   ple.resamp = NULL, submod.resamp = NULL, verbose = TRUE,
-  verbose.resamp = FALSE)
+  verbose.resamp = FALSE, seed = 777)
 }
 \arguments{
 \item{Y}{The outcome variable. Must be numeric or survival (ex; Surv(time,cens) )}
@@ -30,16 +30,17 @@ match X.}
 \item{family}{Outcome type. Options include "gaussion" (default), "binomial", and "survival".}
 
 \item{filter}{Maps (Y,A,X) => (Y,A,X.star) where X.star has potentially less
-covariates than X. Default is "Filter_ENET", NULL uses no filter.}
+covariates than X. Default is "filter_glmnet", "None" uses no filter.}
 
 \item{ple}{PLE (Patient-Level Estimate) function. Maps the observed data to PLEs.
 (Y,A,X) ==> PLE(X). Default for "gaussian"/"binomial" is "ple_ranger"
 (treatment-specific random forest models). The default for "survival" is
-"ple_glmnet" (elastic net (glmnet) cox regression).}
+"ple_glmnet" (elastic net (glmnet) cox regression). "None" uses no ple.}
 
 \item{submod}{Subgroup identification model function. Maps the observed data and/or PLEs
 to subgroups. Default of "gaussian"/"binomial" is "submod_lmtree" (MOB with OLS loss).
-Default for "survival" is "submod_weibull" (MOB with weibull loss)}
+Default for "survival" is "submod_weibull" (MOB with weibull loss). "None" uses no 
+submod.}
 
 \item{param}{Parameter estimation and inference function. Based on the discovered subgroups,
 perform inference through the input function (by name). Default for "gaussian"/"binomial" is
@@ -61,21 +62,23 @@ perform inference through the input function (by name). Default for "gaussian"/"
 to resampling. Default=FALSE.}
 
 \item{resample}{Resampling method for resample-based estimates and variability metrics.
-Options include "Boostrap" and "Permutation." Default=NULL (No resampling).}
+Options include "Boostrap", "Permutation", and "CV". Default=NULL (No resampling).}
 
 \item{stratify}{Stratified resampling (Default=TRUE)}
 
 \item{R}{Number of resamples (default=100)}
 
-\item{filter.resamp}{Filter function during resampling, default=NULL (use original Filter)}
+\item{filter.resamp}{Filter function during resampling, default=NULL (use filter)}
 
-\item{ple.resamp}{PLE function during resampling, default=NULL (use original PLE)}
+\item{ple.resamp}{PLE function during resampling, default=NULL (use ple)}
 
-\item{submod.resamp}{SubMod function for resampling, default=NULL (use original SubMod)}
+\item{submod.resamp}{submod function for resampling, default=NULL (use submod)}
 
 \item{verbose}{Detail progress of PRISM? Default=TRUE}
 
 \item{verbose.resamp}{Output iterations during resampling? Default=FALSE}
+
+\item{seed}{Seed for PRISM run (Default=777)}
 }
 \value{
 Trained PRISM object. Includes filter, ple, submod, and param outputs.
@@ -120,7 +123,7 @@ res0$param.dat # overall/subgroup specific parameter estimates/inference
 plot(res0) # Forest plot: overall/subgroup specific parameter estimates (CIs)
 
 # Without filtering #
-res1 = PRISM(Y=Y, A=A, X=X, filter=NULL)
+res1 = PRISM(Y=Y, A=A, X=X, filter="None" )
 plot(res1$submod.fit$mod)
 plot(res1)
 
@@ -128,7 +131,7 @@ plot(res1)
 \donttest{
   res_boot = PRISM(Y=Y, A=A, X=X, resample = "Bootstrap", R=50, verbose.resamp = TRUE)
   # Plot of distributions and P(est>0) #
-  plot(res_boot, type="resample")+geom_vline(xintercept = 0)
+  plot(res_boot, type="resample", estimand = "E(Y|A=1)-E(Y|A=0)")+geom_vline(xintercept = 0)
   aggregate(I(est>0)~Subgrps, data=res_boot$resamp.dist, FUN="mean")
 }
 
@@ -149,7 +152,7 @@ plot(res1)
                        verbose.resamp = TRUE)
   plot(res_weibull1$submod.fit$mod)
   plot(res_weibull1)
-  plot(res_weibull1, type="resample")+geom_vline(xintercept = 1)
+  plot(res_weibull1, type="resample", estimand = "HR(A=1 vs A=0)")+geom_vline(xintercept = 1)
   aggregate(I(est<1)~Subgrps, data=res_weibull1$resamp.dist, FUN="mean")
 
   # PRISM: ENET ==> CTREE ==> Cox; bootstrapping for posterior prob/inference #
@@ -157,7 +160,7 @@ plot(res1)
                      resample="Bootstrap", R=100, verbose.resamp = TRUE)
   plot(res_ctree1$submod.fit$submod.fit$mod)
   plot(res_ctree1)
-  plot(res_ctree1, type="resample")+geom_vline(xintercept = 1)
+  plot(res_ctree1, type="resample", estimand="HR(A=1 vs A=0)")+geom_vline(xintercept = 1)
   aggregate(I(est<1)~Subgrps, data=res_ctree1$resamp.dist, FUN="mean")
 }
 

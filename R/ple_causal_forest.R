@@ -45,7 +45,6 @@ ple_causal_forest = function(Y, A, X, Xtest, tune=FALSE, num.trees=500, family="
   if (!requireNamespace("grf", quietly = TRUE)) {
     stop("Package grf needed for ple_causal_forest. Please install.")
   }
-  set.seed(5131)
   ## Regression Forest: Y~X ##
   forest.Y = grf::regression_forest(X, Y, ci.group.size=1,
                                     num.trees = min(500, num.trees) )
@@ -111,7 +110,7 @@ predict.ple_causal_forest = function(object, newdata=NULL, ...){
     Y_hat = forest.Y$predictions
     ## Regression Forest: W~X, If RCT ==> W is independent of X; use sample mean ##
     if (is.numeric(forest.A)){
-      A_hat = rep( forest.A, dim(newdata)[1]  )
+      A_hat = rep( forest.A, length(Y_hat)  )
     }
     if (is.list(forest.A)){
       A_hat = forest.A$predictions
@@ -123,7 +122,7 @@ predict.ple_causal_forest = function(object, newdata=NULL, ...){
     Y_hat = predict(forest.Y, newdata)$predictions
     ## Regression Forest: W~X, If RCT ==> W is independent of X; use sample mean ##
     if (is.numeric(forest.A)){
-      A_hat = rep( forest.A, dim(newdata)[1]  )
+      A_hat = rep( forest.A, length(Y_hat)  )
     }
     if (is.list(forest.A)){
       A_hat = predict(forest.A, newdata)

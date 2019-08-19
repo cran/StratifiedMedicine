@@ -10,7 +10,7 @@ library(ggplot2)
 library(dplyr)
 library(partykit)
 library(StratifiedMedicine)
-dat_ctns = generate_subgrp_data(family="gaussian", seed=65532)
+dat_ctns = generate_subgrp_data(family="gaussian")
 Y = dat_ctns$Y
 X = dat_ctns$X # 50 covariates, 46 are noise variables, X1 and X2 are truly predictive
 A = dat_ctns$A # binary treatment, 1:1 randomized 
@@ -53,33 +53,22 @@ res0$param.dat
 plot(res0, type="forest")
 
 ## ----modify_submod_plot--------------------------------------------------
-param.dat = res0$param.dat[res0$param.dat$Subgrps>0,]
+param.dat = res0$param.dat[res0$param.dat$Subgrps>0 & 
+                             res0$param.dat$estimand=="E(Y|A=1)-E(Y|A=0)",]
 param.dat$est = with(param.dat, sprintf("%.2f",round(est,2)))
 param.dat$CI = with(param.dat, paste("[", sprintf("%.2f",round(param.dat$LCL,2)),",",
                                      sprintf("%.2f",round(param.dat$UCL,2)),"]",sep=""))
-mu_1 = aggregate(res0$mu_train$mu1~res0$out.train$Subgrps, FUN="mean")
-colnames(mu_1) = c("Subgrps", "est.A1")
-mu_0 = aggregate(res0$mu_train$mu0~res0$out.train$Subgrps, FUN="mean")
-colnames(mu_0) = c("Subgrps", "est.A0")
-param.dat = left_join(param.dat, mu_1, by="Subgrps")
-param.dat = left_join(param.dat, mu_0, by="Subgrps")
-param.dat$est.A1 = with(param.dat, sprintf("%.2f",round(est.A1,2)))
-param.dat$est.A0 = with(param.dat, sprintf("%.2f",round(est.A0,2)))
 smod = res0$submod.fit$mod
 smod_node <- as.list(smod$node)
 for(i in 1:nrow(param.dat)){
    smod_node[[param.dat[i,1]]]$info$est <- param.dat$est[i]
    smod_node[[param.dat[i,1]]]$info$CI <-  param.dat$CI[i]
-   smod_node[[param.dat[i,1]]]$info$est.A1 <- param.dat$est.A1[i]
-   smod_node[[param.dat[i,1]]]$info$est.A0 <- param.dat$est.A0[i]
 }
 smod$node <- as.partynode(smod_node)
 plot(smod, terminal_panel = node_terminal, tp_args = list(
   FUN = function(node) c( paste("n =", node$nobs),
-                          paste("E(Y|A=0):", node$est.A0),
-                          paste("E(Y|A=1):", node$est.A1),
-                          paste("Diff:",node$est),
-                          node$CI) ) )
+                          "E(Y|A=1)-E(Y|A=0)",
+                          paste(node$est, node$CI) ) ) )
 
 
 ## ----heat_maps-----------------------------------------------------------
@@ -93,7 +82,7 @@ plot(res0, type="heatmap", grid.data = grid.data)
 # Change hyper-parameters #
 res_new_hyper = PRISM(Y=Y, A=A, X=X, filter.hyper = list(lambda="lambda.1se"),
                       ple.hyper = list(min.node.pct=0.05), 
-                      submod.hyper = list(minsize=200))
+                      submod.hyper = list(minsize=200), verbose=FALSE)
 plot(res_new_hyper$submod.fit$mod) # Plot subgroup model results
 plot(res_new_hyper) # Forest plot 
 
@@ -101,9 +90,8 @@ plot(res_new_hyper) # Forest plot
 library(ggplot2)
 library(dplyr)
 res_boot = PRISM(Y=Y, A=A, X=X, resample = "Bootstrap", R=50, verbose=FALSE)
-# # Plot of distributions and P(est>0) #
-plot(res_boot, type="resample")+geom_vline(xintercept = 0)
-aggregate(I(est>0)~Subgrps, data=res_boot$resamp.dist, FUN="mean")
+# Plot of distributions #
+plot(res_boot, type="resample", estimand = "E(Y|A=1)-E(Y|A=0)")+geom_vline(xintercept = 0)
 
 
 ## ----default_surv--------------------------------------------------------
@@ -204,6 +192,7 @@ param_rlm = function(Y, A, X, mu_hat, Subgrps, alpha_ovrl, alpha_s, ...){
   indata = data.frame(Y=Y,A=A, X)
   mod.ovrl = rlm(Y ~ A , data=indata)
   param.dat0 = data.frame( Subgrps=0, N = dim(indata)[1],
+                           estimand = "E(Y|A=1)-E(Y|A=0)",
                            est = summary(mod.ovrl)$coefficients[2,1],
                            SE = summary(mod.ovrl)$coefficients[2,2] )
   param.dat0$LCL = with(param.dat0, est-qt(1-alpha_ovrl/2, N-1)*SE)
@@ -226,8 +215,8 @@ param_rlm = function(Y, A, X, mu_hat, Subgrps, alpha_ovrl, alpha_s, ...){
   S_N = as.numeric( table(Subgrps) )
   param.dat = lapply(S_levels, looper)
   param.dat = do.call(rbind, param.dat)
-  param.dat = data.frame( S = S_levels, N=S_N, param.dat)
-  colnames(param.dat) = c("Subgrps", "N", "est", "SE", "LCL", "UCL", "pval")
+  param.dat = data.frame( S = S_levels, N=S_N, estimand="E(Y|A=1)-E(Y|A=0)", param.dat)
+  colnames(param.dat) = c("Subgrps", "N", "estimand", "est", "SE", "LCL", "UCL", "pval")
   param.dat = rbind( param.dat0, param.dat)
   return( param.dat )
 }
