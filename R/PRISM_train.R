@@ -89,6 +89,9 @@ PRISM_train = function(Y, A, X, Xtest=NULL, family="gaussian",
                                              alpha_ovrl=alpha_ovrl,
                                              alpha_s=alpha_s)  ),
                         error = function(e) "param error" )
+  if (is.null(param.dat$estimand)){
+    param.dat$estimand = "est"
+  }
   
   output = list( mu_train = mu_train, mu_test = mu_test, filter.mod = filter.mod,
                  filter.vars = filter.vars, ple.fit = ple.fit, submod.fit = submod.fit,

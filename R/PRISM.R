@@ -6,7 +6,8 @@
 #' at each step.
 #'
 #' @param Y The outcome variable. Must be numeric or survival (ex; Surv(time,cens) )
-#' @param A Treatment variable. (ex: a=1,...,A or a="control","new")
+#' @param A Treatment variable. (ex: a=1,...,A, should be numeric). Default is NULL, which
+#' searches for prognostic variables (Y~X). 
 #' @param X Covariate space. Variables types (ex: numeric, factor, ordinal) should be set
 #' to align with subgroup model (submod argument). For example, for lmtree, binary variables
 #' coded as numeric (ex: 0, 1) are treated differently than the corresponding factor version
@@ -34,6 +35,10 @@
 #' @param ple.hyper Hyper-parameters for the PLE function (must be list). Default is NULL.
 #' @param submod.hyper Hyper-parameters for the SubMod function (must be list). Default is NULL.
 #' @param param.hyper Hyper-parameters for the Param function (must be list). Default is NULL.
+#' @param bayes Based on input point estimates/SEs, this uses a bayesian based approach 
+#' to obtain ests, SEs, CIs, and posterior probabilities. Currently includes "norm_norm" 
+#' (normal prior at overall estimate with large uninformative variance; normal posterior).
+#' Default=NULL. 
 #' @param prefilter_resamp Option to filter the covariate space (based on filter model) prior
 #' to resampling. Default=FALSE.
 #' @param resample Resampling method for resample-based estimates and variability metrics.
@@ -60,6 +65,7 @@
 #'   \item Rules - Subgroup rules / definitions
 #'   \item param.dat - Parameter estimates and variablity metrics (depends on param)
 #'   \item resamp.dist - Resampling distributions (NULL if no resampling is done)
+#'   \item bayes.fun - Function to simulate posterior distribution (NULL if no bayes)
 #' }
 #' @export
 #' @importFrom stats aggregate coef lm model.matrix p.adjust pnorm confint
@@ -81,7 +87,7 @@
 #'
 #' # Run Default: filter_glmnet, ple_ranger, submod_lmtree, param_ple #
 #' res0 = PRISM(Y=Y, A=A, X=X)
-#' res0$filter.vars # variables that pass the filter
+#' summary(res0)
 #' plot(res0, type="PLE:density") # distribution of PLEs
 #' plot(res0, type="PLE:waterfall") # PLE waterfall plot
 #' plot(res0$submod.fit$mod) # Plot of subgroup model
@@ -90,8 +96,10 @@
 #'
 #' # Without filtering #
 #' res1 = PRISM(Y=Y, A=A, X=X, filter="None" )
+#' summary(res1)
 #' plot(res1$submod.fit$mod)
 #' plot(res1)
+#' 
 #'
 #' ## With bootstrap (No filtering) ##
 #' \donttest{
@@ -133,16 +141,19 @@
 #' @references Jemielita and Mehrotra (2019 in progress)
 
 ##### PRISM: Patient Responder Identifiers for Stratified Medicine ########
-PRISM = function(Y, A, X, Xtest=NULL, family="gaussian",
+PRISM = function(Y, A=NULL, X, Xtest=NULL, family="gaussian",
                  filter="filter_glmnet", ple=NULL, submod=NULL, param=NULL,
                  alpha_ovrl=0.05, alpha_s = 0.05,
                  filter.hyper=NULL, ple.hyper=NULL, submod.hyper = NULL,
-                 param.hyper = NULL, prefilter_resamp=FALSE,
+                 param.hyper = NULL, bayes = NULL, prefilter_resamp=FALSE,
                  resample = NULL, stratify=TRUE,
                  R = 100, filter.resamp = NULL, ple.resamp = NULL,
                  submod.resamp = NULL, verbose=TRUE,
                  verbose.resamp = FALSE, seed=777){
 
+  if (is.null(A)){
+    message("No Treatment Variable (A) Provided")
+  }
   ## "Test" Set ##
   if (is.null(Xtest)){ Xtest = X   }
 
@@ -156,8 +167,14 @@ PRISM = function(Y, A, X, Xtest=NULL, family="gaussian",
   ### Defaults: By Family (gaussian, binomial (Risk Difference), survival ) ##
   if (family=="gaussian" | family=="binomial"){
     if (is.null(ple) ){ ple = "ple_ranger" }
-    if (is.null(submod) ){ submod = "submod_lmtree" }
-    if (is.null(param) ){ param = "param_ple" }
+    if (is.null(submod) ){ 
+      if (is.null(A)){ submod = "submod_ctree" }
+      else { submod = "submod_lmtree" }
+    }
+    if (is.null(param) ){ 
+      if (is.null(A)){ param = "param_lm" }
+      else { param = "param_ple" }
+    }
   }
   if (family=="survival"){
     if (is.null(ple) ){ ple = "ple_ranger" }
@@ -179,9 +196,21 @@ PRISM = function(Y, A, X, Xtest=NULL, family="gaussian",
   param.dat = res0$param.dat
   param.dat = param.dat[order(param.dat$Subgrps, param.dat$estimand),]
   resamp.dist = NULL ## Set to null (needed if no resampling)
+  bayes.fun = NULL ## Set to null (needed if no bayes)
+  ### Bayesian ###
+  if ( !is.null(bayes)){
+    if (verbose){ 
+      message( paste("Bayesian Posterior Estimation:", bayes) )
+    }
+    res.bayes = do.call( bayes, list(PRISM.fit = res0,
+                                     alpha_ovrl=alpha_ovrl,
+                                     alpha_s=alpha_s)  )
+    param.dat = res.bayes$param.dat
+    bayes.fun = res.bayes$bayes.sim
+  }
   
   ### Resampling (Bootstrapping, Permutation, or CV) ###
-  if ( !is.null(resample)){
+  if ( !is.null(resample) & is.null(bayes)){
     if (verbose){ 
       if (resample=="CV"){
         message( paste("Cross Validation", R, "folds") )
@@ -204,15 +233,21 @@ PRISM = function(Y, A, X, Xtest=NULL, family="gaussian",
     param.dat = resR$param.dat
     resamp.dist = resR$resamp.dist
   }
+  if (is.null(A)){
+    out.train = data.frame(Y, X, Subgrps=res0$Subgrps.train)
+  }
+  if (!is.null(A)){
+    out.train = data.frame(Y, A, X, Subgrps=res0$Subgrps.train)
+  }
   ### Return Results ##
   res = list( filter.mod = res0$filter.mod, filter.vars = res0$filter.vars,
               ple.fit = res0$ple.fit, mu_train=res0$mu_train, mu_test=res0$mu_test,
               submod.fit = res0$submod.fit,
-              out.train = data.frame(Y, A, X, Subgrps=res0$Subgrps.train),
+              out.train = out.train,
               out.test = data.frame(Xtest, Subgrps=res0$Subgrps.test),
               Rules=res0$Rules,
-              param.dat = param.dat, resamp.dist = resamp.dist,
-              family = family,
+              param.dat = param.dat, resamp.dist = resamp.dist, 
+              bayes.fun = bayes.fun, family = family,
               filter = filter, ple = ple, submod=submod, param=param,
               alpha_ovrl = alpha_ovrl, alpha_s = alpha_s )
   class(res) <- c("PRISM")
@@ -279,3 +314,46 @@ predict.PRISM = function(object, newdata=NULL, type="all", ...){
   return(res)
 }
 
+#' PRISM: Patient Response Identifier for Stratified Medicine (Summary)
+#'
+#' Predictions for PRISM algorithm. Given the training set (Y,A,X) or new test set (Xtest),
+#' output ple predictions and identified subgroups with correspond parameter estimates.
+#'
+#' @param object Trained PRISM model.
+#' @param ... Any additional parameters, not currently passed through.
+#'
+#' @return List of key PRISM outputs: (1) Configuration, (2) Variables that pass filter 
+#' (if filter is used), (3) Number of Identified Subgroups, and (4) Parameter Estimates, 
+#' SEs, and CIs for each subgroup/estimand
+#' 
+#' @method summary PRISM
+#' @export
+#' 
+summary.PRISM = function(object,...){
+
+  out = NULL
+  alpha_ovrl = object$alpha_ovrl
+  alpha_s = object$alpha_s
+  # Configuration #
+  out$`PRISM Configuration` <- with(object, paste(filter, ple, submod, param, sep=" => "))
+  # Filter #
+  if (object$filter!="None"){
+    out$`Variables that Pass Filter` <- object$filter.vars
+  }
+  # Subgroup summary #
+  numb.subs <- with(object, length(unique(out.train$Subgrps)))
+  out$`Number of Identified Subgroups` <- numb.subs
+  # Parameter Estimation Summary #
+  param.dat <- object$param.dat
+  param.dat <- param.dat[order(param.dat$estimand, param.dat$Subgrps),]
+  param.dat$est = with(param.dat, round(est,4) )
+  param.dat$SE = with( param.dat,  round(SE,4) )
+  param.dat$CI = with(param.dat, paste("[",round(LCL,4), ",", 
+                                       round(UCL,4), "]", sep=""))
+  param.dat$alpha = with(param.dat, ifelse(Subgrps==0, alpha_ovrl, alpha_s))
+  param.dat = param.dat[, colnames(param.dat) %in% 
+                          c("Subgrps", "N", "estimand", "est", "SE", "CI", "alpha")]
+  out$`Parameter Estimates` = param.dat
+  class(out) <- "summary.PRISM"
+  out
+}

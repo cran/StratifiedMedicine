@@ -4,19 +4,20 @@
 \alias{PRISM}
 \title{PRISM: Patient Response Identifier for Stratified Medicine}
 \usage{
-PRISM(Y, A, X, Xtest = NULL, family = "gaussian",
+PRISM(Y, A = NULL, X, Xtest = NULL, family = "gaussian",
   filter = "filter_glmnet", ple = NULL, submod = NULL,
   param = NULL, alpha_ovrl = 0.05, alpha_s = 0.05,
   filter.hyper = NULL, ple.hyper = NULL, submod.hyper = NULL,
-  param.hyper = NULL, prefilter_resamp = FALSE, resample = NULL,
-  stratify = TRUE, R = 100, filter.resamp = NULL,
+  param.hyper = NULL, bayes = NULL, prefilter_resamp = FALSE,
+  resample = NULL, stratify = TRUE, R = 100, filter.resamp = NULL,
   ple.resamp = NULL, submod.resamp = NULL, verbose = TRUE,
   verbose.resamp = FALSE, seed = 777)
 }
 \arguments{
 \item{Y}{The outcome variable. Must be numeric or survival (ex; Surv(time,cens) )}
 
-\item{A}{Treatment variable. (ex: a=1,...,A or a="control","new")}
+\item{A}{Treatment variable. (ex: a=1,...,A, should be numeric). Default is NULL, which
+searches for prognostic variables (Y~X).}
 
 \item{X}{Covariate space. Variables types (ex: numeric, factor, ordinal) should be set
 to align with subgroup model (submod argument). For example, for lmtree, binary variables
@@ -58,6 +59,11 @@ perform inference through the input function (by name). Default for "gaussian"/"
 
 \item{param.hyper}{Hyper-parameters for the Param function (must be list). Default is NULL.}
 
+\item{bayes}{Based on input point estimates/SEs, this uses a bayesian based approach 
+to obtain ests, SEs, CIs, and posterior probabilities. Currently includes "norm_norm" 
+(normal prior at overall estimate with large uninformative variance; normal posterior).
+Default=NULL.}
+
 \item{prefilter_resamp}{Option to filter the covariate space (based on filter model) prior
 to resampling. Default=FALSE.}
 
@@ -94,6 +100,7 @@ Trained PRISM object. Includes filter, ple, submod, and param outputs.
   \item Rules - Subgroup rules / definitions
   \item param.dat - Parameter estimates and variablity metrics (depends on param)
   \item resamp.dist - Resampling distributions (NULL if no resampling is done)
+  \item bayes.fun - Function to simulate posterior distribution (NULL if no bayes)
 }
 }
 \description{
@@ -115,7 +122,7 @@ A = dat_ctns$A
 
 # Run Default: filter_glmnet, ple_ranger, submod_lmtree, param_ple #
 res0 = PRISM(Y=Y, A=A, X=X)
-res0$filter.vars # variables that pass the filter
+summary(res0)
 plot(res0, type="PLE:density") # distribution of PLEs
 plot(res0, type="PLE:waterfall") # PLE waterfall plot
 plot(res0$submod.fit$mod) # Plot of subgroup model
@@ -124,8 +131,10 @@ plot(res0) # Forest plot: overall/subgroup specific parameter estimates (CIs)
 
 # Without filtering #
 res1 = PRISM(Y=Y, A=A, X=X, filter="None" )
+summary(res1)
 plot(res1$submod.fit$mod)
 plot(res1)
+
 
 ## With bootstrap (No filtering) ##
 \donttest{

@@ -21,6 +21,7 @@ dim(X)
 ## ----default_ctns--------------------------------------------------------
 # PRISM Default: filter_glmnet, ple_ranger, submod_lmtree, param_ple #
 res0 = PRISM(Y=Y, A=A, X=X)
+summary(res0)
 ## This is the same as running ##
 # res1 = PRISM(Y=Y, A=A, X=X, family="gaussian", filter="filter_glmnet", 
 #              ple = "ple_ranger", submod = "submod_lmtree", param="param_ple")

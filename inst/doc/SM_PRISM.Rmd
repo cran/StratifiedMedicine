@@ -63,6 +63,7 @@ For continuous data (family="gaussian"), the default PRISM configuration is: fil
 ```{r default_ctns}
 # PRISM Default: filter_glmnet, ple_ranger, submod_lmtree, param_ple #
 res0 = PRISM(Y=Y, A=A, X=X)
+summary(res0)
 ## This is the same as running ##
 # res1 = PRISM(Y=Y, A=A, X=X, family="gaussian", filter="filter_glmnet", 
 #              ple = "ple_ranger", submod = "submod_lmtree", param="param_ple")
@@ -85,7 +86,7 @@ plot(res0, type="PLE:density")+geom_vline(xintercept = 0) +
 plot(res0, type="PLE:waterfall")+geom_vline(xintercept = 0) + 
   geom_text(x=200, y=1, label=paste("Prob(PLE>0)=", prob.PLE, sep=""))
 ```
-Next, the subgroup model (lmtree), identifies 4-subgroups based on with varying treatment effects. To visualize this, we use the built-in plotting options for lmtree (within the powerful partykit R package). By plotting the subgroup model object ("submod.fit\$mod")", we see that partitions are made through X1 (predictive) and X2 (predictive). At each node, parameter estimates for node (subgroup) specific OLS models, $Y\sim \beta_0+\beta_1*A$. For example, patients in nodes 4 and 6 have estimated treatment effects of 0.47 and 0.06 respectively. Subgroup predictions for the train/test set can be found in the "out.train" and "out.test" data-sets.
+Next, the subgroup model (lmtree), identifies 4-subgroups based on varying treatment effects. To visualize this, we use the built-in plotting options for lmtree (within the powerful partykit R package). By plotting the subgroup model object ("submod.fit\$mod")", we see that partitions are made through X1 (predictive) and X2 (predictive). At each node, parameter estimates for node (subgroup) specific OLS models, $Y\sim \beta_0+\beta_1*A$. For example, patients in nodes 4 and 6 have estimated treatment effects of 0.47 and 0.06 respectively. Subgroup predictions for the train/test set can be found in the "out.train" and "out.test" data-sets.
 ```{r default_ctns_submod}
 plot(res0$submod.fit$mod, terminal_panel = NULL)
 table(res0$out.train$Subgrps)
@@ -93,7 +94,7 @@ table(res0$out.test$Subgrps)
 ```
 These estimates tend to be overly positive or negative, as the same data that trains the subgroup model is used to estimate the treatment effects. Resampling, such as bootstrapping, can generally be used for"de-biased"treatment effect estimates and obtain valid inference. An alternative approach without resampling is the use the PLEs for parameter estimation and inference (param="param_ple"). Currently, "param_ple" is only implemented for continuous and binary data. For the overall population and each subgroup ($s=0,,,.S$), parameter estimates are obtained by averaging the PLEs:
 
-$$ \hat{\theta}_k = \frac{1}{n_k} \sum_{i \in S_k} \hat{\theta}(x_i) $$
+$$ \hat{\theta}_k = \frac{1}{n_k} \sum_{i \in S_k} {\theta}(x_i) $$
 For SEs / CIs, we utilize "pseudo-outcomes":
 $$ Y^{\star}_i = \frac{AY - (A-P(A|X))E(Y|A=1,X)}{P(A|X)} - \frac{(1-A)Y - (A-P(A|X))E(Y|A=0,X)}{1-P(A|X)}$$
 Note that $E(Y^{\star}_i)=E(Y|A=1,X)-E(Y|A=0,X)$ and $E(n_k^{-1}\sum_{i \in S_k} Y^{\star}_i)= E(Y|A=1, X \in S_k)-E(Y|A=0, X \in S_k)$. Next:
@@ -138,7 +139,7 @@ plot(res0, type="heatmap", grid.data = grid.data)
 ```
 
 
-The hyper-parameters for the individual steps of PRISM can also be easily modified. For example, "filter_glmnet" by default selects covariates based on "lambda.min", "ple_ranger" requires nodes to contain at least 10% of the total observations, and "submod_lmtree" requires nodes to contain at least 5% of the total observations. To modify this:
+The hyper-parameters for the individual steps of PRISM can also be easily modified. For example, "filter_glmnet" by default selects covariates based on "lambda.min", "ple_ranger" requires nodes to contain at least 10% of the total observations, and "submod_lmtree" requires nodes to contain at least 10% of the total observations. To modify this:
 
 ```{r default_hyper}
 # PRISM Default: filter_glmnet, ple_ranger, submod_lmtree, param_ple #
