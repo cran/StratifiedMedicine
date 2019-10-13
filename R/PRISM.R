@@ -42,9 +42,16 @@
 #' @param prefilter_resamp Option to filter the covariate space (based on filter model) prior
 #' to resampling. Default=FALSE.
 #' @param resample Resampling method for resample-based estimates and variability metrics.
-#' Options include "Boostrap", "Permutation", and "CV". Default=NULL (No resampling).
+#' Options include "Boostrap", "Permutation", and "CV" (cross-validation). 
+#' Default=NULL (No resampling).
 #' @param stratify Stratified resampling (Default=TRUE)
-#' @param R Number of resamples (default=100)
+#' @param R Number of resamples (default=NULL; R=100 for Permutation/Bootstrap and 
+#' R=5 for CV)
+#' @param calibrate Bootstrap calibration for nominal alpha (Loh et al 2016).
+#' Default=TRUE which outputs the calibrated alpha level and calibrated CIs for 
+#' the overall population and subgroups. Not applicable for permutation/CV resampling.
+#' @param alpha.mat Grid of alpha values for calibration. Default=NULL, which uses
+#' seq(alpha/1000,alpha,by=0.005) for alpha_ovrl/alpha_s. 
 #' @param filter.resamp Filter function during resampling, default=NULL (use filter)
 #' @param ple.resamp PLE function during resampling, default=NULL (use ple)
 #' @param submod.resamp submod function for resampling, default=NULL (use submod)
@@ -72,6 +79,7 @@
 #' @importFrom stats predict pt qnorm qt quantile sd weighted.mean vcov na.omit
 #' @import dplyr
 #' @import ggplot2
+#' @import ggparty
 #' @import survival
 #'
 #' @examples
@@ -87,19 +95,23 @@
 #'
 #' # Run Default: filter_glmnet, ple_ranger, submod_lmtree, param_ple #
 #' res0 = PRISM(Y=Y, A=A, X=X)
+#' \donttest{
 #' summary(res0)
-#' plot(res0, type="PLE:density") # distribution of PLEs
-#' plot(res0, type="PLE:waterfall") # PLE waterfall plot
-#' plot(res0$submod.fit$mod) # Plot of subgroup model
-#' res0$param.dat # overall/subgroup specific parameter estimates/inference
-#' plot(res0) # Forest plot: overall/subgroup specific parameter estimates (CIs)
-#'
+#' plot(res0)
+#' }
 #' # Without filtering #
+#' \donttest{
 #' res1 = PRISM(Y=Y, A=A, X=X, filter="None" )
 #' summary(res1)
-#' plot(res1$submod.fit$mod)
 #' plot(res1)
+#' }
 #' 
+#' # Search for Prognostic Only (omit A from function) #
+#' \donttest{
+#' res3 = PRISM(Y=Y, X=X)
+#' summary(res3)
+#' plot(res3)
+#' }
 #'
 #' ## With bootstrap (No filtering) ##
 #' \donttest{
@@ -124,7 +136,6 @@
 #'   # Default: PRISM: glmnet ==> MOB (Weibull) ==> Cox; bootstrapping posterior prob/inference #
 #'   res_weibull1 = PRISM(Y=Y, A=A, X=X, ple=NULL, resample="Bootstrap", R=100,
 #'                        verbose.resamp = TRUE)
-#'   plot(res_weibull1$submod.fit$mod)
 #'   plot(res_weibull1)
 #'   plot(res_weibull1, type="resample", estimand = "HR(A=1 vs A=0)")+geom_vline(xintercept = 1)
 #'   aggregate(I(est<1)~Subgrps, data=res_weibull1$resamp.dist, FUN="mean")
@@ -132,13 +143,12 @@
 #'   # PRISM: ENET ==> CTREE ==> Cox; bootstrapping for posterior prob/inference #
 #'   res_ctree1 = PRISM(Y=Y, A=A, X=X, ple=NULL, submod = "submod_ctree",
 #'                      resample="Bootstrap", R=100, verbose.resamp = TRUE)
-#'   plot(res_ctree1$submod.fit$submod.fit$mod)
 #'   plot(res_ctree1)
 #'   plot(res_ctree1, type="resample", estimand="HR(A=1 vs A=0)")+geom_vline(xintercept = 1)
 #'   aggregate(I(est<1)~Subgrps, data=res_ctree1$resamp.dist, FUN="mean")
 #' }
 #'
-#' @references Jemielita and Mehrotra (2019 in progress)
+#' @references Jemielita and Mehrotra (2019 to appear)
 
 ##### PRISM: Patient Responder Identifiers for Stratified Medicine ########
 PRISM = function(Y, A=NULL, X, Xtest=NULL, family="gaussian",
@@ -147,12 +157,19 @@ PRISM = function(Y, A=NULL, X, Xtest=NULL, family="gaussian",
                  filter.hyper=NULL, ple.hyper=NULL, submod.hyper = NULL,
                  param.hyper = NULL, bayes = NULL, prefilter_resamp=FALSE,
                  resample = NULL, stratify=TRUE,
-                 R = 100, filter.resamp = NULL, ple.resamp = NULL,
+                 R = NULL, calibrate=TRUE, alpha.mat=NULL,
+                 filter.resamp = NULL, ple.resamp = NULL,
                  submod.resamp = NULL, verbose=TRUE,
                  verbose.resamp = FALSE, seed=777){
 
   if (is.null(A)){
-    message("No Treatment Variable (A) Provided")
+    message("No Treatment Variable (A) Provided: Searching for Prognostic Effects")
+    if (!is.null(submod)){
+      if (submod %in% c("submod_lmtree", "submod_weibull")){
+      message( paste(submod, 
+              "not usable without (A): Using submod_ctree") )
+      }
+    }
   }
   ## "Test" Set ##
   if (is.null(Xtest)){ Xtest = X   }
@@ -178,8 +195,14 @@ PRISM = function(Y, A=NULL, X, Xtest=NULL, family="gaussian",
   }
   if (family=="survival"){
     if (is.null(ple) ){ ple = "ple_ranger" }
-    if (is.null(submod) ){ submod = "submod_weibull" }
-    if (is.null(param) ){ param = "param_cox" }
+    if (is.null(submod) ){ 
+      if (is.null(A)){ submod = "submod_ctree" }
+      else { submod = "submod_weibull" }
+      }
+    if (is.null(param) ){ 
+      if (is.null(A)){ param = "param_rmst" }
+      else { param = "param_cox" }
+    }
   }
   
   ## Train PRISM on Observed Data (Y,A,X) ##
@@ -195,8 +218,9 @@ PRISM = function(Y, A=NULL, X, Xtest=NULL, family="gaussian",
   mu_train = res0$mu_train
   param.dat = res0$param.dat
   param.dat = param.dat[order(param.dat$Subgrps, param.dat$estimand),]
-  resamp.dist = NULL ## Set to null (needed if no resampling)
-  bayes.fun = NULL ## Set to null (needed if no bayes)
+  resamp.dist = NULL # Set to NULL (needed if no resampling)
+  resamp.calib = NULL # Set to NULL (needed if no resampling)
+  bayes.fun = NULL # Set to NULL (needed if no bayes)
   ### Bayesian ###
   if ( !is.null(bayes)){
     if (verbose){ 
@@ -210,6 +234,10 @@ PRISM = function(Y, A=NULL, X, Xtest=NULL, family="gaussian",
   }
   
   ### Resampling (Bootstrapping, Permutation, or CV) ###
+  if (is.null(R) & !is.null(resample)){
+    if (resample %in% c("Permutation", "Bootstrap")){R = 100}
+    if (resample == "CV" ) {R = 5}
+  }
   if ( !is.null(resample) & is.null(bayes)){
     if (verbose){ 
       if (resample=="CV"){
@@ -229,9 +257,11 @@ PRISM = function(Y, A=NULL, X, Xtest=NULL, family="gaussian",
                  filter.hyper=filter.hyper, ple.hyper=ple.hyper, 
                  submod.hyper = submod.hyper, param.hyper = param.hyper, 
                  verbose=verbose.resamp, prefilter_resamp=prefilter_resamp,
-                 resample=resample, R=R, stratify = stratify)
+                 resample=resample, R=R, stratify = stratify, calibrate=calibrate,
+                 alpha.mat=alpha.mat)
     param.dat = resR$param.dat
     resamp.dist = resR$resamp.dist
+    resamp.calib = resR$resamp.calib
   }
   if (is.null(A)){
     out.train = data.frame(Y, X, Subgrps=res0$Subgrps.train)
@@ -247,6 +277,7 @@ PRISM = function(Y, A=NULL, X, Xtest=NULL, family="gaussian",
               out.test = data.frame(Xtest, Subgrps=res0$Subgrps.test),
               Rules=res0$Rules,
               param.dat = param.dat, resamp.dist = resamp.dist, 
+              resamp.calib = resamp.calib,
               bayes.fun = bayes.fun, family = family,
               filter = filter, ple = ple, submod=submod, param=param,
               alpha_ovrl = alpha_ovrl, alpha_s = alpha_s )
@@ -283,9 +314,9 @@ PRISM = function(Y, A=NULL, X, Xtest=NULL, family="gaussian",
 #'
 #' # Run Default: filter_glmnet, ple_ranger, submod_lmtree, param_ple #
 #' res0 = PRISM(Y=Y, A=A, X=X)
-#' summary( predict(res0) ) # all #
-#' summary( predict(res0, type="ple") )
-#' summary( predict(res0, type="submod") )
+#' summary( predict(res0, X) ) # all #
+#' summary( predict(res0, X, type="ple") )
+#' summary( predict(res0, X, type="submod") )
 #'
 #'
 #' @method predict PRISM
@@ -294,22 +325,17 @@ PRISM = function(Y, A=NULL, X, Xtest=NULL, family="gaussian",
 predict.PRISM = function(object, newdata=NULL, type="all", ...){
 
   if (type=="all"){
-    mu_hat = predict(object$ple.fit, newdata=newdata)
-    Subgrps = predict(object$submod.fit, newdata=newdata)
-    res = data.frame(mu_hat, Subgrps=Subgrps$Subgrps)
-    params = object$param.dat
-    res = left_join(res, params[,c("Subgrps", "est")], by="Subgrps")
-    res = data.frame(res)
+    mu_hat = object$ple.fit$pred.fun(object$ple.fit$mod, newdata)
+    Subgrps = object$submod.fit$pred.fun(object$submod.fit$mod, newdata)$Subgrps
+    res = data.frame(Subgrps = Subgrps, mu_hat)
   }
   if (type=="ple"){
-    mu_hat = predict(object$ple.fit, newdata=newdata)
+    mu_hat = object$ple.fit$pred.fun(object$ple.fit$mod, newdata)
     res = data.frame(mu_hat)
   }
   if (type=="submod"){
-    Subgrps = predict(object$submod.fit, newdata=newdata)
-    res = data.frame(Subgrps=Subgrps$Subgrps)
-    params = object$param.dat
-    res = left_join(res, params[,c("Subgrps", "est")], by="Subgrps")
+    Subgrps = object$submod.fit$pred.fun(object$submod.fit$mod, newdata)$Subgrps
+    res = data.frame(Subgrps=Subgrps)
   }
   return(res)
 }

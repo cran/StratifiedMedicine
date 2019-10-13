@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<meta name="author" content="Thomas Jemielita" />
+
+
+<title>User-specific Models: PRISM</title>
+
+
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css" data-origin="pandoc">
+div.sourceCode { overflow-x: auto; }
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code > span.dt { color: #902000; } /* DataType */
+code > span.dv { color: #40a070; } /* DecVal */
+code > span.bn { color: #40a070; } /* BaseN */
+code > span.fl { color: #40a070; } /* Float */
+code > span.ch { color: #4070a0; } /* Char */
+code > span.st { color: #4070a0; } /* String */
+code > span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code > span.ot { color: #007020; } /* Other */
+code > span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code > span.fu { color: #06287e; } /* Function */
+code > span.er { color: #ff0000; font-weight: bold; } /* Error */
+code > span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+code > span.cn { color: #880000; } /* Constant */
+code > span.sc { color: #4070a0; } /* SpecialChar */
+code > span.vs { color: #4070a0; } /* VerbatimString */
+code > span.ss { color: #bb6688; } /* SpecialString */
+code > span.im { } /* Import */
+code > span.va { color: #19177c; } /* Variable */
+code > span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code > span.op { color: #666666; } /* Operator */
+code > span.bu { } /* BuiltIn */
+code > span.ex { } /* Extension */
+code > span.pp { color: #bc7a00; } /* Preprocessor */
+code > span.at { color: #7d9029; } /* Attribute */
+code > span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code > span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code > span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    for (var j = 0; j < rules.length; j++) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") continue;
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' || rule.style.backgroundColor === '') continue;
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+<link href="data:text/css;charset=utf-8,body%20%7B%0Abackground%2Dcolor%3A%20%23fff%3B%0Amargin%3A%201em%20auto%3B%0Amax%2Dwidth%3A%20700px%3B%0Aoverflow%3A%20visible%3B%0Apadding%2Dleft%3A%202em%3B%0Apadding%2Dright%3A%202em%3B%0Afont%2Dfamily%3A%20%22Open%20Sans%22%2C%20%22Helvetica%20Neue%22%2C%20Helvetica%2C%20Arial%2C%20sans%2Dserif%3B%0Afont%2Dsize%3A%2014px%3B%0Aline%2Dheight%3A%201%2E35%3B%0A%7D%0A%23header%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0A%23TOC%20%7B%0Aclear%3A%20both%3B%0Amargin%3A%200%200%2010px%2010px%3B%0Apadding%3A%204px%3B%0Awidth%3A%20400px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Aborder%2Dradius%3A%205px%3B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Afont%2Dsize%3A%2013px%3B%0Aline%2Dheight%3A%201%2E3%3B%0A%7D%0A%23TOC%20%2Etoctitle%20%7B%0Afont%2Dweight%3A%20bold%3B%0Afont%2Dsize%3A%2015px%3B%0Amargin%2Dleft%3A%205px%3B%0A%7D%0A%23TOC%20ul%20%7B%0Apadding%2Dleft%3A%2040px%3B%0Amargin%2Dleft%3A%20%2D1%2E5em%3B%0Amargin%2Dtop%3A%205px%3B%0Amargin%2Dbottom%3A%205px%3B%0A%7D%0A%23TOC%20ul%20ul%20%7B%0Amargin%2Dleft%3A%20%2D2em%3B%0A%7D%0A%23TOC%20li%20%7B%0Aline%2Dheight%3A%2016px%3B%0A%7D%0Atable%20%7B%0Amargin%3A%201em%20auto%3B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dcolor%3A%20%23DDDDDD%3B%0Aborder%2Dstyle%3A%20outset%3B%0Aborder%2Dcollapse%3A%20collapse%3B%0A%7D%0Atable%20th%20%7B%0Aborder%2Dwidth%3A%202px%3B%0Apadding%3A%205px%3B%0Aborder%2Dstyle%3A%20inset%3B%0A%7D%0Atable%20td%20%7B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dstyle%3A%20inset%3B%0Aline%2Dheight%3A%2018px%3B%0Apadding%3A%205px%205px%3B%0A%7D%0Atable%2C%20table%20th%2C%20table%20td%20%7B%0Aborder%2Dleft%2Dstyle%3A%20none%3B%0Aborder%2Dright%2Dstyle%3A%20none%3B%0A%7D%0Atable%20thead%2C%20table%20tr%2Eeven%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Ap%20%7B%0Amargin%3A%200%2E5em%200%3B%0A%7D%0Ablockquote%20%7B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Apadding%3A%200%2E25em%200%2E75em%3B%0A%7D%0Ahr%20%7B%0Aborder%2Dstyle%3A%20solid%3B%0Aborder%3A%20none%3B%0Aborder%2Dtop%3A%201px%20solid%20%23777%3B%0Amargin%3A%2028px%200%3B%0A%7D%0Adl%20%7B%0Amargin%2Dleft%3A%200%3B%0A%7D%0Adl%20dd%20%7B%0Amargin%2Dbottom%3A%2013px%3B%0Amargin%2Dleft%3A%2013px%3B%0A%7D%0Adl%20dt%20%7B%0Afont%2Dweight%3A%20bold%3B%0A%7D%0Aul%20%7B%0Amargin%2Dtop%3A%200%3B%0A%7D%0Aul%20li%20%7B%0Alist%2Dstyle%3A%20circle%20outside%3B%0A%7D%0Aul%20ul%20%7B%0Amargin%2Dbottom%3A%200%3B%0A%7D%0Apre%2C%20code%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0Aborder%2Dradius%3A%203px%3B%0Acolor%3A%20%23333%3B%0Awhite%2Dspace%3A%20pre%2Dwrap%3B%20%0A%7D%0Apre%20%7B%0Aborder%2Dradius%3A%203px%3B%0Amargin%3A%205px%200px%2010px%200px%3B%0Apadding%3A%2010px%3B%0A%7D%0Apre%3Anot%28%5Bclass%5D%29%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Acode%20%7B%0Afont%2Dfamily%3A%20Consolas%2C%20Monaco%2C%20%27Courier%20New%27%2C%20monospace%3B%0Afont%2Dsize%3A%2085%25%3B%0A%7D%0Ap%20%3E%20code%2C%20li%20%3E%20code%20%7B%0Apadding%3A%202px%200px%3B%0A%7D%0Adiv%2Efigure%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0Aimg%20%7B%0Abackground%2Dcolor%3A%20%23FFFFFF%3B%0Apadding%3A%202px%3B%0Aborder%3A%201px%20solid%20%23DDDDDD%3B%0Aborder%2Dradius%3A%203px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Amargin%3A%200%205px%3B%0A%7D%0Ah1%20%7B%0Amargin%2Dtop%3A%200%3B%0Afont%2Dsize%3A%2035px%3B%0Aline%2Dheight%3A%2040px%3B%0A%7D%0Ah2%20%7B%0Aborder%2Dbottom%3A%204px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Apadding%2Dbottom%3A%202px%3B%0Afont%2Dsize%3A%20145%25%3B%0A%7D%0Ah3%20%7B%0Aborder%2Dbottom%3A%202px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Afont%2Dsize%3A%20120%25%3B%0A%7D%0Ah4%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23f7f7f7%3B%0Amargin%2Dleft%3A%208px%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Ah5%2C%20h6%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23ccc%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Aa%20%7B%0Acolor%3A%20%230033dd%3B%0Atext%2Ddecoration%3A%20none%3B%0A%7D%0Aa%3Ahover%20%7B%0Acolor%3A%20%236666ff%3B%20%7D%0Aa%3Avisited%20%7B%0Acolor%3A%20%23800080%3B%20%7D%0Aa%3Avisited%3Ahover%20%7B%0Acolor%3A%20%23BB00BB%3B%20%7D%0Aa%5Bhref%5E%3D%22http%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0Aa%5Bhref%5E%3D%22https%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0A%0Acode%20%3E%20span%2Ekw%20%7B%20color%3A%20%23555%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Edt%20%7B%20color%3A%20%23902000%3B%20%7D%20%0Acode%20%3E%20span%2Edv%20%7B%20color%3A%20%2340a070%3B%20%7D%20%0Acode%20%3E%20span%2Ebn%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Efl%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Ech%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Est%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Eco%20%7B%20color%3A%20%23888888%3B%20font%2Dstyle%3A%20italic%3B%20%7D%20%0Acode%20%3E%20span%2Eot%20%7B%20color%3A%20%23007020%3B%20%7D%20%0Acode%20%3E%20span%2Eal%20%7B%20color%3A%20%23ff0000%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Efu%20%7B%20color%3A%20%23900%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%20code%20%3E%20span%2Eer%20%7B%20color%3A%20%23a61717%3B%20background%2Dcolor%3A%20%23e3d2d2%3B%20%7D%20%0A" rel="stylesheet" type="text/css" />
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">User-specific Models: PRISM</h1>
+<h4 class="author"><em>Thomas Jemielita</em></h4>
+
+
+
+<p>One advantage of PRISM is the flexibility to adjust each step of the algorithm and also to input user-created functions/models. This facilitates faster testing and experimentation. First, let’s simulate the continuous data again.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(StratifiedMedicine)
+dat_ctns =<span class="st"> </span><span class="kw">generate_subgrp_data</span>(<span class="dt">family=</span><span class="st">&quot;gaussian&quot;</span>)
+Y =<span class="st"> </span>dat_ctns<span class="op">$</span>Y
+X =<span class="st"> </span>dat_ctns<span class="op">$</span>X <span class="co"># 50 covariates, 46 are noise variables, X1 and X2 are truly predictive</span>
+A =<span class="st"> </span>dat_ctns<span class="op">$</span>A <span class="co"># binary treatment, 1:1 randomized </span></code></pre></div>
+<p>Next, before we illustrate how to implement user-specific models in PRISM, let’s highlight the key outputs at each step.</p>
+<table>
+<caption>Key Outputs by Model</caption>
+<thead>
+<tr class="header">
+<th align="left">Model</th>
+<th align="left">Required.Outputs</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">filter</td>
+<td align="left">filter.vars</td>
+<td align="left">Variables that pass filter</td>
+</tr>
+<tr class="even">
+<td align="left">ple</td>
+<td align="left">list(mod,pred.fun)</td>
+<td align="left">Model fit(s) and prediction function</td>
+</tr>
+<tr class="odd">
+<td align="left">submod</td>
+<td align="left">list(mod,pred.fun)</td>
+<td align="left">Model fit(s) and prediction function</td>
+</tr>
+<tr class="even">
+<td align="left">param</td>
+<td align="left">param.dat</td>
+<td align="left">Parameter Estimates (overall and subgroups)</td>
+</tr>
+</tbody>
+</table>
+<p>For the filter model, the only required output is a vector of variable names that pass the filter (for example: covariates with non-zero coefficients in elastic net model). For the patient-level estimate (ple) model and subgroup model (submod), the required outputs are the model fit(s) and an associated prediction function. The prediction function can also be swapped with pre-computed predictions (details below). Lastly, for parameter estimation (param), the only required output is “param.dat”, which is a data frame of parameter estimates/SEs/CIs for the overall population and the identified subgroups (if any). Template functions for each step can also be generated using the model_template() function within the StratifiedMedicine package.</p>
+<div id="filter-model-filter" class="section level1">
+<h1>Filter Model (filter)</h1>
+<p>The template filter function is:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">model_template</span>(<span class="dt">type=</span><span class="st">&quot;filter&quot;</span>)
+<span class="co">#&gt; function (Y, A, X, ...) </span>
+<span class="co">#&gt; {</span>
+<span class="co">#&gt; }</span>
+<span class="co">#&gt; &lt;bytecode: 0x000000001b0a3b40&gt;</span>
+<span class="co">#&gt; &lt;environment: 0x000000001b0a4320&gt;</span></code></pre></div>
+<p>Note that the filter uses the observed data (Y,A,X), which are required inputs, and outputs an object called “filter.vars.” This needs to contain the variable names of the variables that pass the filtering step. For example, consider the lasso:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">filter_lasso =<span class="st"> </span><span class="cf">function</span>(Y, A, X, <span class="dt">lambda=</span><span class="st">&quot;lambda.min&quot;</span>, <span class="dt">family=</span><span class="st">&quot;gaussian&quot;</span>, ...){
+  <span class="kw">require</span>(glmnet)
+  ## Model matrix X matrix #
+  X =<span class="st"> </span><span class="kw">model.matrix</span>(<span class="op">~</span>. <span class="op">-</span><span class="dv">1</span>, <span class="dt">data =</span> X )
+
+  ##### Elastic Net on estimated ITEs #####
+  <span class="kw">set.seed</span>(<span class="dv">6134</span>)
+  <span class="cf">if</span> (family<span class="op">==</span><span class="st">&quot;survival&quot;</span>) { family =<span class="st"> &quot;cox&quot;</span>  }
+  mod &lt;-<span class="st"> </span><span class="kw">cv.glmnet</span>(<span class="dt">x =</span> X, <span class="dt">y =</span> Y, <span class="dt">nlambda =</span> <span class="dv">100</span>, <span class="dt">alpha=</span><span class="dv">1</span>, <span class="dt">family=</span>family)
+
+  ### Extract filtered variable based on lambda <span class="al">###</span>
+  VI &lt;-<span class="st"> </span><span class="kw">coef</span>(mod, <span class="dt">s =</span> lambda)[,<span class="dv">1</span>]
+  VI =<span class="st"> </span>VI[<span class="op">-</span><span class="dv">1</span>]
+  filter.vars =<span class="st"> </span><span class="kw">names</span>(VI[VI<span class="op">!=</span><span class="dv">0</span>])
+  <span class="kw">return</span>( <span class="kw">list</span>(<span class="dt">filter.vars=</span>filter.vars) )
+}</code></pre></div>
+<p>An option to change lambda, which can change which variables remain after filtering (lambda.min keeps more, lambda.1se keeps less), while not required, is also included. This can then be adjusted through the “filter.hyper” argument in PRISM.</p>
+</div>
+<div id="patient-level-estimates-ple" class="section level1">
+<h1>Patient-Level Estimates (ple)</h1>
+<p>The template ple function is:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">model_template</span>(<span class="dt">type=</span><span class="st">&quot;ple&quot;</span>)
+<span class="co">#&gt; function (Y, A, X, Xtest, ...) </span>
+<span class="co">#&gt; {</span>
+<span class="co">#&gt; }</span>
+<span class="co">#&gt; &lt;bytecode: 0x000000001b0a3d00&gt;</span>
+<span class="co">#&gt; &lt;environment: 0x0000000018b69428&gt;</span></code></pre></div>
+<p>For the “ple” model, the only required arguments are the observed data (Y,A,X) and Xtest. By default, if Xtest is not provided in PRISM, it uses the training X instead. The only required outputs are mod (fitted models(s)) and a prediction function or pre-computed predictions in the training/test set (mu_train, mu_test). However, certain features in PRISM, such as the heat map plots, cannot be utilized without providing a prediction funcion. In the example below, treatment-specific random forest models are fit with hyperparameter “mtry” (number of variables randomly selected at each split). This can be altered in the “ple.hyper” argument in PRISM. Notably, certain default plots or parameter functions require the ple predictions to be named as “mu0”, “mu1”, and “PLE”.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">ple_ranger_mtry =<span class="st"> </span><span class="cf">function</span>(Y, A, X, Xtest, <span class="dt">mtry=</span><span class="dv">5</span>, ...){
+   <span class="kw">require</span>(ranger)
+   ## Split data by treatment <span class="al">###</span>
+    train0 =<span class="st">  </span><span class="kw">data.frame</span>(<span class="dt">Y=</span>Y[A<span class="op">==</span><span class="dv">0</span>], X[A<span class="op">==</span><span class="dv">0</span>,])
+    train1 =<span class="st">  </span><span class="kw">data.frame</span>(<span class="dt">Y=</span>Y[A<span class="op">==</span><span class="dv">1</span>], X[A<span class="op">==</span><span class="dv">1</span>,])
+    <span class="co"># Trt 0 #</span>
+    mod0 &lt;-<span class="st"> </span><span class="kw">ranger</span>(Y <span class="op">~</span><span class="st"> </span>., <span class="dt">data =</span> train0, <span class="dt">seed=</span><span class="dv">1</span>, <span class="dt">mtry =</span> mtry)
+    <span class="co"># Trt 1 #</span>
+    mod1 &lt;-<span class="st"> </span><span class="kw">ranger</span>(Y <span class="op">~</span><span class="st"> </span>., <span class="dt">data =</span> train1, <span class="dt">seed=</span><span class="dv">2</span>, <span class="dt">mtry =</span> mtry)
+    mod =<span class="st"> </span><span class="kw">list</span>(<span class="dt">mod0=</span>mod0, <span class="dt">mod1=</span>mod1)
+    pred.fun &lt;-<span class="st"> </span><span class="cf">function</span>(mod, X){
+      mu1_hat &lt;-<span class="st"> </span><span class="kw">predict</span>( mod<span class="op">$</span>mod1, X )<span class="op">$</span>predictions
+      mu0_hat &lt;-<span class="st"> </span><span class="kw">predict</span>( mod<span class="op">$</span>mod0, X )<span class="op">$</span>predictions
+      mu_hat &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">mu1 =</span> mu1_hat, <span class="dt">mu0 =</span> mu0_hat, <span class="dt">PLE =</span> mu1_hat<span class="op">-</span>mu0_hat)
+      <span class="kw">return</span>(mu_hat)
+      }
+    res =<span class="st"> </span><span class="kw">list</span>(<span class="dt">mod=</span>mod, <span class="dt">pred.fun=</span>pred.fun)
+    <span class="kw">return</span>( res )
+}</code></pre></div>
+</div>
+<div id="subgroup-identification-submod" class="section level1">
+<h1>Subgroup Identification (submod)</h1>
+<p>The template submod function is:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">model_template</span>(<span class="dt">type=</span><span class="st">&quot;submod&quot;</span>)
+<span class="co">#&gt; function (Y, A, X, Xtest, mu_train, ...) </span>
+<span class="co">#&gt; {</span>
+<span class="co">#&gt; }</span>
+<span class="co">#&gt; &lt;bytecode: 0x000000001b0a3ef8&gt;</span>
+<span class="co">#&gt; &lt;environment: 0x000000002070cfa8&gt;</span></code></pre></div>
+<p>For the “submod” model, the only required arguments are the observed data (Y,A,X) and Xtest. “mu_train” (based on ple predictions) can also be passed through. The only required outputs are mod (fitted models(s)) and a prediction function or pre-computed subgroup predictions in the training/test set (Subgrps.train, Subgrps.test). In the example below, consider a modified version of “submod_lmtree” where we search for predictive effects only. By default, “submod_lmtree” searches for prognostic and/or predictive effects.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">submod_lmtree_pred =<span class="st"> </span><span class="cf">function</span>(Y, A, X, Xtest, mu_train, ...){
+  <span class="kw">require</span>(partykit)
+  ## Fit Model ##
+  mod &lt;-<span class="st"> </span><span class="kw">lmtree</span>(Y<span class="op">~</span>A <span class="op">|</span><span class="st"> </span>., <span class="dt">data =</span> X, <span class="dt">parm=</span><span class="dv">2</span>) ##parm=2 focuses on treatment interaction #
+  pred.fun &lt;-<span class="st"> </span><span class="cf">function</span>(mod, <span class="dt">X=</span><span class="ot">NULL</span>, <span class="dt">type=</span><span class="st">&quot;subgrp&quot;</span>){
+     Subgrps &lt;-<span class="st"> </span><span class="ot">NULL</span>
+     Subgrps &lt;-<span class="st"> </span><span class="kw">as.numeric</span>( <span class="kw">predict</span>(mod, <span class="dt">type=</span><span class="st">&quot;node&quot;</span>, <span class="dt">newdata =</span> X) )
+     <span class="kw">return</span>( <span class="kw">list</span>(<span class="dt">Subgrps=</span>Subgrps) )
+  }
+  ## Return Results ##
+  <span class="kw">return</span>(  <span class="kw">list</span>(<span class="dt">mod=</span>mod, <span class="dt">pred.fun=</span>pred.fun) )
+}</code></pre></div>
+</div>
+<div id="parameter-estimation-param" class="section level1">
+<h1>Parameter Estimation (param)</h1>
+<p>The template param function is:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">model_template</span>(<span class="dt">type=</span><span class="st">&quot;param&quot;</span>)
+<span class="co">#&gt; function (Y, A, X, mu_hat, Subgrps, alpha_ovrl, alpha_s, ...) </span>
+<span class="co">#&gt; {</span>
+<span class="co">#&gt; }</span>
+<span class="co">#&gt; &lt;bytecode: 0x000000001b0a4160&gt;</span>
+<span class="co">#&gt; &lt;environment: 0x000000002c9b54e0&gt;</span></code></pre></div>
+<p>For the parameter model, the key arguments are (Y, A, X) (observed data), mu_hat (ple predictions), Subgrps, alpha_ovrl and alpha_s (overall and subgroup alpha levels). The only required output is “param.dat”, which contains parameter estimates/variability metrics. For all PRISM functionality to work, param.dat should contain column names of “est” (parameter estimate), “SE” (standard error), and “LCL”/“UCL” (lower and upper confidence limits). It is recommended to include an “estimand” column for labeling purpose. In the example below, M-estimation models are fit for each subgroup and overall. Alternatively, a single M-estimation model could’ve been fit.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">
+### Robust linear Regression: E(Y|A=1) - E(Y|A=0) <span class="al">###</span>
+param_rlm =<span class="st"> </span><span class="cf">function</span>(Y, A, X, mu_hat, Subgrps, alpha_ovrl, alpha_s, ...){
+  <span class="kw">require</span>(MASS)
+  indata =<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">Y=</span>Y,<span class="dt">A=</span>A, X)
+  mod.ovrl =<span class="st"> </span><span class="kw">rlm</span>(Y <span class="op">~</span><span class="st"> </span>A , <span class="dt">data=</span>indata)
+  param.dat0 =<span class="st"> </span><span class="kw">data.frame</span>( <span class="dt">Subgrps=</span><span class="dv">0</span>, <span class="dt">N =</span> <span class="kw">dim</span>(indata)[<span class="dv">1</span>],
+                           <span class="dt">estimand =</span> <span class="st">&quot;E(Y|A=1)-E(Y|A=0)&quot;</span>,
+                           <span class="dt">est =</span> <span class="kw">summary</span>(mod.ovrl)<span class="op">$</span>coefficients[<span class="dv">2</span>,<span class="dv">1</span>],
+                           <span class="dt">SE =</span> <span class="kw">summary</span>(mod.ovrl)<span class="op">$</span>coefficients[<span class="dv">2</span>,<span class="dv">2</span>] )
+  param.dat0<span class="op">$</span>LCL =<span class="st"> </span><span class="kw">with</span>(param.dat0, est<span class="op">-</span><span class="kw">qt</span>(<span class="dv">1</span><span class="op">-</span>alpha_ovrl<span class="op">/</span><span class="dv">2</span>, N<span class="op">-</span><span class="dv">1</span>)<span class="op">*</span>SE)
+  param.dat0<span class="op">$</span>UCL =<span class="st"> </span><span class="kw">with</span>(param.dat0, est<span class="op">+</span><span class="kw">qt</span>(<span class="dv">1</span><span class="op">-</span>alpha_ovrl<span class="op">/</span><span class="dv">2</span>, N<span class="op">-</span><span class="dv">1</span>)<span class="op">*</span>SE)
+  param.dat0<span class="op">$</span>pval =<span class="st"> </span><span class="kw">with</span>(param.dat0, <span class="dv">2</span><span class="op">*</span><span class="kw">pt</span>(<span class="op">-</span><span class="kw">abs</span>(est<span class="op">/</span>SE), <span class="dt">df=</span>N<span class="op">-</span><span class="dv">1</span>) )
+
+  ## Subgroup Specific Estimate ##
+  looper =<span class="st"> </span><span class="cf">function</span>(s){
+    rlm.mod =<span class="st"> </span><span class="kw">tryCatch</span>( <span class="kw">rlm</span>(Y <span class="op">~</span><span class="st"> </span>A , <span class="dt">data=</span>indata[Subgrps<span class="op">==</span>s,]),
+                       <span class="dt">error =</span> <span class="cf">function</span>(e) <span class="st">&quot;param error&quot;</span> )
+    n.s =<span class="st"> </span><span class="kw">dim</span>(indata[Subgrps<span class="op">==</span>s,])[<span class="dv">1</span>]
+    est =<span class="st"> </span><span class="kw">summary</span>(rlm.mod)<span class="op">$</span>coefficients[<span class="dv">2</span>,<span class="dv">1</span>]
+    SE =<span class="st"> </span><span class="kw">summary</span>(rlm.mod)<span class="op">$</span>coefficients[<span class="dv">2</span>,<span class="dv">2</span>]
+    LCL =<span class="st">  </span>est<span class="op">-</span><span class="kw">qt</span>(<span class="dv">1</span><span class="op">-</span>alpha_ovrl<span class="op">/</span><span class="dv">2</span>, n.s<span class="op">-</span><span class="dv">1</span>)<span class="op">*</span>SE
+    UCL =<span class="st">  </span>est<span class="op">+</span><span class="kw">qt</span>(<span class="dv">1</span><span class="op">-</span>alpha_ovrl<span class="op">/</span><span class="dv">2</span>, n.s<span class="op">-</span><span class="dv">1</span>)<span class="op">*</span>SE
+    pval =<span class="st"> </span><span class="dv">2</span><span class="op">*</span><span class="kw">pt</span>(<span class="op">-</span><span class="kw">abs</span>(est<span class="op">/</span>SE), <span class="dt">df=</span>n.s<span class="op">-</span><span class="dv">1</span>)
+    <span class="kw">return</span>( <span class="kw">c</span>(est, SE, LCL, UCL, pval) )
+  }
+  S_levels =<span class="st"> </span><span class="kw">as.numeric</span>( <span class="kw">names</span>(<span class="kw">table</span>(Subgrps)) )
+  S_N =<span class="st"> </span><span class="kw">as.numeric</span>( <span class="kw">table</span>(Subgrps) )
+  param.dat =<span class="st"> </span><span class="kw">lapply</span>(S_levels, looper)
+  param.dat =<span class="st"> </span><span class="kw">do.call</span>(rbind, param.dat)
+  param.dat =<span class="st"> </span><span class="kw">data.frame</span>( <span class="dt">S =</span> S_levels, <span class="dt">N=</span>S_N, <span class="dt">estimand=</span><span class="st">&quot;E(Y|A=1)-E(Y|A=0)&quot;</span>, param.dat)
+  <span class="kw">colnames</span>(param.dat) =<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Subgrps&quot;</span>, <span class="st">&quot;N&quot;</span>, <span class="st">&quot;estimand&quot;</span>, <span class="st">&quot;est&quot;</span>, <span class="st">&quot;SE&quot;</span>, <span class="st">&quot;LCL&quot;</span>, <span class="st">&quot;UCL&quot;</span>, <span class="st">&quot;pval&quot;</span>)
+  param.dat =<span class="st"> </span><span class="kw">rbind</span>( param.dat0, param.dat)
+  <span class="kw">return</span>( param.dat )
+}</code></pre></div>
+</div>
+<div id="putting-it-all-together" class="section level1">
+<h1>Putting it All Together</h1>
+<p>Finally, let’s input these user-specific functions into PRISM:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">
+res_user1 =<span class="st"> </span><span class="kw">PRISM</span>(<span class="dt">Y=</span>Y, <span class="dt">A=</span>A, <span class="dt">X=</span>X, <span class="dt">family=</span><span class="st">&quot;gaussian&quot;</span>, <span class="dt">filter=</span><span class="st">&quot;filter_lasso&quot;</span>, 
+             <span class="dt">ple =</span> <span class="st">&quot;ple_ranger_mtry&quot;</span>, <span class="dt">submod =</span> <span class="st">&quot;submod_lmtree_pred&quot;</span>,
+             <span class="dt">param=</span><span class="st">&quot;param_rlm&quot;</span>)
+<span class="co">#&gt; Warning: package 'glmnet' was built under R version 3.5.3</span>
+<span class="co">#&gt; Warning: package 'foreach' was built under R version 3.5.2</span>
+<span class="co">#&gt; Warning: package 'ranger' was built under R version 3.5.2</span>
+## variables that remain after filtering ##
+res_user1<span class="op">$</span>filter.vars
+<span class="co">#&gt;  [1] &quot;X1&quot;  &quot;X2&quot;  &quot;X3&quot;  &quot;X5&quot;  &quot;X7&quot;  &quot;X8&quot;  &quot;X10&quot; &quot;X12&quot; &quot;X16&quot; &quot;X18&quot; &quot;X24&quot;</span>
+<span class="co">#&gt; [12] &quot;X26&quot; &quot;X31&quot; &quot;X40&quot; &quot;X46&quot; &quot;X50&quot;</span>
+## Subgroup model: lmtree searching for predictive only ##
+<span class="kw">plot</span>(res_user1<span class="op">$</span>submod.fit<span class="op">$</span>mod)</code></pre></div>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">## Parameter estimates/inference
+res_user1<span class="op">$</span>param.dat
+<span class="co">#&gt;   Subgrps   N          estimand          est         SE         LCL</span>
+<span class="co">#&gt; 1       0 800 E(Y|A=1)-E(Y|A=0)  0.229913662 0.08114137  0.07063823</span>
+<span class="co">#&gt; 2       2 426 E(Y|A=1)-E(Y|A=0) -0.004165125 0.10352507 -0.20765001</span>
+<span class="co">#&gt; 3       3 374 E(Y|A=1)-E(Y|A=0)  0.506836561 0.11525208  0.28021130</span>
+<span class="co">#&gt;         UCL         pval alpha</span>
+<span class="co">#&gt; 1 0.3891891 4.720217e-03  0.05</span>
+<span class="co">#&gt; 2 0.1993198 9.679263e-01  0.05</span>
+<span class="co">#&gt; 3 0.7334618 1.429483e-05  0.05</span>
+<span class="kw">plot</span>(res_user1, <span class="dt">type=</span><span class="st">&quot;forest&quot;</span>)</code></pre></div>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+</div>
+<div id="conclusion" class="section level1">
+<h1>Conclusion</h1>
+<p>Overall, each step of PRISM is customizable, allowing for fast experimentation and improvement of individual steps. The main consideration for customizing the steps are certain required inputs/outputs.</p>
+</div>
+
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

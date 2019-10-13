@@ -9,9 +9,10 @@ PRISM(Y, A = NULL, X, Xtest = NULL, family = "gaussian",
   param = NULL, alpha_ovrl = 0.05, alpha_s = 0.05,
   filter.hyper = NULL, ple.hyper = NULL, submod.hyper = NULL,
   param.hyper = NULL, bayes = NULL, prefilter_resamp = FALSE,
-  resample = NULL, stratify = TRUE, R = 100, filter.resamp = NULL,
-  ple.resamp = NULL, submod.resamp = NULL, verbose = TRUE,
-  verbose.resamp = FALSE, seed = 777)
+  resample = NULL, stratify = TRUE, R = NULL, calibrate = TRUE,
+  alpha.mat = NULL, filter.resamp = NULL, ple.resamp = NULL,
+  submod.resamp = NULL, verbose = TRUE, verbose.resamp = FALSE,
+  seed = 777)
 }
 \arguments{
 \item{Y}{The outcome variable. Must be numeric or survival (ex; Surv(time,cens) )}
@@ -68,11 +69,20 @@ Default=NULL.}
 to resampling. Default=FALSE.}
 
 \item{resample}{Resampling method for resample-based estimates and variability metrics.
-Options include "Boostrap", "Permutation", and "CV". Default=NULL (No resampling).}
+Options include "Boostrap", "Permutation", and "CV" (cross-validation). 
+Default=NULL (No resampling).}
 
 \item{stratify}{Stratified resampling (Default=TRUE)}
 
-\item{R}{Number of resamples (default=100)}
+\item{R}{Number of resamples (default=NULL; R=100 for Permutation/Bootstrap and 
+R=5 for CV)}
+
+\item{calibrate}{Bootstrap calibration for nominal alpha (Loh et al 2016).
+Default=TRUE which outputs the calibrated alpha level and calibrated CIs for 
+the overall population and subgroups. Not applicable for permutation/CV resampling.}
+
+\item{alpha.mat}{Grid of alpha values for calibration. Default=NULL, which uses
+seq(alpha/1000,alpha,by=0.005) for alpha_ovrl/alpha_s.}
 
 \item{filter.resamp}{Filter function during resampling, default=NULL (use filter)}
 
@@ -122,19 +132,23 @@ A = dat_ctns$A
 
 # Run Default: filter_glmnet, ple_ranger, submod_lmtree, param_ple #
 res0 = PRISM(Y=Y, A=A, X=X)
+\donttest{
 summary(res0)
-plot(res0, type="PLE:density") # distribution of PLEs
-plot(res0, type="PLE:waterfall") # PLE waterfall plot
-plot(res0$submod.fit$mod) # Plot of subgroup model
-res0$param.dat # overall/subgroup specific parameter estimates/inference
-plot(res0) # Forest plot: overall/subgroup specific parameter estimates (CIs)
-
+plot(res0)
+}
 # Without filtering #
+\donttest{
 res1 = PRISM(Y=Y, A=A, X=X, filter="None" )
 summary(res1)
-plot(res1$submod.fit$mod)
 plot(res1)
+}
 
+# Search for Prognostic Only (omit A from function) #
+\donttest{
+res3 = PRISM(Y=Y, X=X)
+summary(res3)
+plot(res3)
+}
 
 ## With bootstrap (No filtering) ##
 \donttest{
@@ -159,7 +173,6 @@ plot(res1)
   # Default: PRISM: glmnet ==> MOB (Weibull) ==> Cox; bootstrapping posterior prob/inference #
   res_weibull1 = PRISM(Y=Y, A=A, X=X, ple=NULL, resample="Bootstrap", R=100,
                        verbose.resamp = TRUE)
-  plot(res_weibull1$submod.fit$mod)
   plot(res_weibull1)
   plot(res_weibull1, type="resample", estimand = "HR(A=1 vs A=0)")+geom_vline(xintercept = 1)
   aggregate(I(est<1)~Subgrps, data=res_weibull1$resamp.dist, FUN="mean")
@@ -167,7 +180,6 @@ plot(res1)
   # PRISM: ENET ==> CTREE ==> Cox; bootstrapping for posterior prob/inference #
   res_ctree1 = PRISM(Y=Y, A=A, X=X, ple=NULL, submod = "submod_ctree",
                      resample="Bootstrap", R=100, verbose.resamp = TRUE)
-  plot(res_ctree1$submod.fit$submod.fit$mod)
   plot(res_ctree1)
   plot(res_ctree1, type="resample", estimand="HR(A=1 vs A=0)")+geom_vline(xintercept = 1)
   aggregate(I(est<1)~Subgrps, data=res_ctree1$resamp.dist, FUN="mean")
@@ -175,5 +187,5 @@ plot(res1)
 
 }
 \references{
-Jemielita and Mehrotra (2019 in progress)
+Jemielita and Mehrotra (2019 to appear)
 }

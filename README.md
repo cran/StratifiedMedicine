@@ -55,24 +55,23 @@ res0 = PRISM(Y=Y, A=A, X=X)
 #> PLE: ple_ranger
 #> Subgroup Identification: submod_lmtree
 #> Parameter Estimation: param_ple
+plot(res0) # default: tree plot 
+```
+
+![](man/figures/README-example-1.png)
+
+``` r
 ## Plot the distribution of PLEs ###
 plot(res0, type="PLE:density") # Density plot of PLEs #
 ```
 
-<img src="man/figures/README-example-1.png" width="100%" />
+![](man/figures/README-example-2.png)
 
 ``` r
 plot(res0, type="PLE:waterfall") # waterfall plot of PLEs
 ```
 
-<img src="man/figures/README-example-2.png" width="100%" />
-
-``` r
-## Plot of the subgroup model (lmtree) ##
-plot(res0$submod.fit$mod)
-```
-
-<img src="man/figures/README-example-3.png" width="100%" />
+![](man/figures/README-example-3.png)
 
 ``` r
 ## Overall/subgroup specific parameter estimates/inference
@@ -96,30 +95,30 @@ res0$param.dat
 #> 16       9 107          E(Y|A=0) 2.04080610 0.13504592  1.77306443
 #> 17       9 107          E(Y|A=1) 2.60756289 0.11565560  2.37826441
 #> 18       9 107 E(Y|A=1)-E(Y|A=0) 0.56675679 0.17669715  0.21643749
-#>          UCL          pval
-#> 1  1.7274725 1.879424e-168
-#> 2  1.9383986 1.723772e-180
-#> 3  0.3293281  1.241074e-03
-#> 4  1.5034988  3.314673e-22
-#> 5  1.5349368  1.324710e-23
-#> 6  0.3404068  8.194458e-01
-#> 7  1.7415254  1.972697e-69
-#> 8  1.8294464  5.334423e-62
-#> 9  0.2672171  4.969388e-01
-#> 10 1.8762797  1.916696e-19
-#> 11 2.1878676  1.077698e-26
-#> 12 0.7099659  8.268452e-02
-#> 13 1.9436255  1.028800e-45
-#> 14 2.2355274  1.856343e-48
-#> 15 0.5329128  3.678032e-02
-#> 16 2.3085478  3.359840e-28
-#> 17 2.8368614  3.054161e-42
-#> 18 0.9170761  1.770848e-03
+#>          UCL          pval alpha
+#> 1  1.7274725 1.879424e-168  0.05
+#> 2  1.9383986 1.723772e-180  0.05
+#> 3  0.3293281  1.241074e-03  0.05
+#> 4  1.5034988  3.314673e-22  0.05
+#> 5  1.5349368  1.324710e-23  0.05
+#> 6  0.3404068  8.194458e-01  0.05
+#> 7  1.7415254  1.972697e-69  0.05
+#> 8  1.8294464  5.334423e-62  0.05
+#> 9  0.2672171  4.969388e-01  0.05
+#> 10 1.8762797  1.916696e-19  0.05
+#> 11 2.1878676  1.077698e-26  0.05
+#> 12 0.7099659  8.268452e-02  0.05
+#> 13 1.9436255  1.028800e-45  0.05
+#> 14 2.2355274  1.856343e-48  0.05
+#> 15 0.5329128  3.678032e-02  0.05
+#> 16 2.3085478  3.359840e-28  0.05
+#> 17 2.8368614  3.054161e-42  0.05
+#> 18 0.9170761  1.770848e-03  0.05
 ## Forest plot: Overall/subgroup specific parameter estimates (CIs)
 plot(res0, type="forest")
 ```
 
-<img src="man/figures/README-example-4.png" width="100%" />
+![](man/figures/README-example-4.png)
 
 ``` r
 
@@ -130,11 +129,11 @@ plot(res0, type="heatmap", grid.data = grid.data)
 #> $heatmap.est
 ```
 
-<img src="man/figures/README-example-5.png" width="100%" />
+![](man/figures/README-example-5.png)
 
     #> 
     #> $heatmap.prob
 
-<img src="man/figures/README-example-6.png" width="100%" />
+![](man/figures/README-example-6.png)
 
-Overall, PRISM provides information at the patient-level, the subgroup-level (if any), and the overall population. While there are defaults in place, the user can also input their own functions/model wrappers into the PRISM algorithm. For more details and more examples, we refer the reader to the vignette, [PRISM\_vignette](https://CRAN.R-project.org/package=StratifiedMedicine/vignettes/SM_PRISM.html).
+Overall, PRISM provides information at the patient-level, the subgroup-level (if any), and the overall population. While there are defaults in place, the user can also input their own functions/model wrappers into the PRISM algorithm. For more details and more examples, we refer the reader to the following vignettes, [PRISM\_vignette](https://CRAN.R-project.org/package=StratifiedMedicine/vignettes/SM_PRISM.html), [User\_Specific\_Models](https://CRAN.R-project.org/package=StratifiedMedicine/vignettes/SM_User_Models.html).
