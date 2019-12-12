@@ -1,14 +1,16 @@
-#' Subgroup Identification: Model-based partitioning (lmtree)
+#' Subgroup Identification: Model-based partitioning (glmtree)
 #'
-#' Uses the lmtree (model-based partitioning, OLS) algorithm to identify subgroups
+#' Uses the glmtree (model-based partitioning, glms) algorithm to identify subgroups
 #' (Zeileis, Hothorn, Hornik 2008). Usable for continuous and binary outcomes.
 #'
-#' @param Y The outcome variable. Must be numeric or survival (ex; Surv(time,cens) )
+#' @param Y The outcome variable. Must be numeric
 #' @param A Treatment variable. (a=1,...A)
 #' @param X Covariate space.
 #' @param Xtest Test set
 #' @param mu_train Patient-level estimates (See PLE_models)
 #' @param alpha Significance level for variable selection (default=0.05)
+#' @param glm.fam Family for GLM; default=binomial
+#' @param link Link function for GLM; default="identity"
 #' @param minsize Minimum number of observations in a tree node.
 #' Default = floor( dim(train)[1]*0.05  )
 #' @param maxdepth Maximum depth of any node in the tree (default=4)
@@ -17,6 +19,7 @@
 #' @param ... Any additional parameters, not currently passed through.
 #'
 #' @import partykit
+#' @importFrom stats binomial
 #'
 #' @return Trained lmtree model.
 #'  \itemize{
@@ -29,28 +32,30 @@
 #' \donttest{
 #' library(StratifiedMedicine)
 #'
-#' ## Continuous ##
-#' dat_ctns = generate_subgrp_data(family="gaussian")
-#' Y = dat_ctns$Y
-#' X = dat_ctns$X
-#' A = dat_ctns$A
-#' train = data.frame(Y, A, X)
-#' # Outcome/treatment must be labeled as Y/A #
+#' ## Binomial ##
+#' dat_bin = generate_subgrp_data(family="binomial")
+#' Y = dat_bin$Y
+#' X = dat_bin$X
+#' A = dat_bin$A
 #'
-#' res_lmtree1 = submod_lmtree(Y, A, X, Xtest=X)
-#' res_lmtree2 = submod_lmtree(Y, A, X, Xtest=X, maxdepth=2, minsize=100)
-#' plot(res_lmtree1$mod)
-#' plot(res_lmtree2$mod)
-#'}
+#' 
+#' res_glmtree1 = submod_glmtree(Y, A, X, Xtest=X)
+#' res_glmtree2 = submod_glmtree(Y, A, X, Xtest=X, link="logit")
+#' plot(res_glmtree1$mod)
+#' plot(res_glmtree2$mod)
+#' }
 #'
-#### lmtree (MOB) ###
-submod_lmtree = function(Y, A, X, Xtest, mu_train, alpha=0.05,
+#'
+#### glmtree (MOB) ###
+submod_glmtree = function(Y, A, X, Xtest, mu_train, 
+                         glm.fam = binomial, link="identity", alpha=0.05,
                          minsize = floor( dim(X)[1]*0.10  ),
                          maxdepth = 4, parm=NULL, ...){
 
   ## Fit Model ##
-  mod <- lmtree(Y~A | ., data = X, alpha=alpha, maxdepth = maxdepth, 
-                minsize=minsize, parm=parm)
+  mod <- glmtree(Y~A | ., data = X, family= glm.fam(link=link), 
+                 alpha=alpha, maxdepth = maxdepth, 
+                 minsize=minsize, parm=parm)
   
   # Prediction Function #
   pred.fun <- function(mod, X=NULL, type="subgrp"){
@@ -70,7 +75,7 @@ submod_lmtree = function(Y, A, X, Xtest, mu_train, alpha=0.05,
     return(list(Subgrps=Subgrps, pred=pred))
   }
   res <- list(mod=mod, pred.fun=pred.fun)
-  class(res) <- "submod_lmtree"
+  class(res) <- "submod_glmtree"
   ## Return Results ##
   return(  res )
 }

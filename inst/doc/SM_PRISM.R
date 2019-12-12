@@ -9,25 +9,38 @@ knitr::opts_chunk$set(
 library(knitr)
 summ.table = data.frame( `Step` = c("estimand(s)", "filter", "ple", "submod", "param"),
                         `gaussian` = c("E(Y|A=0)<br>E(Y|A=1)<br>E(Y|A=1)-E(Y|A=0)",
-                                       "filter_glmnet", "ple_ranger",
-                                       "submod_lmtree", "param_ple"),
+                                       "Elastic Net<br>(filter_glmnet)", 
+                                       "Random Forest<br>(ple_ranger)",
+                                       "MOB(OLS)<br>(submod_lmtree)", 
+                                       "Average of PLEs<br>(param_ple)"),
                         `binomial` = c("E(Y|A=0)<br>E(Y|A=1)<br>E(Y|A=1)-E(Y|A=0)",
-                                       "filter_glmnet", "ple_ranger",
-                                       "submod_lmtree", "param_ple"),    
-                        `survival` = c("HR(A=1 vs A=0)", "filter_glmnet", "ple_ranger",
-                                       "submod_weibull", "param_ple") )                        
+                                       "Elastic Net<br>(filter_glmnet)", 
+                                       "Random Forest<br>(ple_ranger)",
+                                       "MOB(GLM)<br>(submod_glmtree)", 
+                                       "Average of PLEs<br>(param_ple)"),    
+                        `survival` = c("HR(A=1 vs A=0)",
+                                       "Elastic Net<br>(filter_glmnet)", 
+                                       "Random Forest<br>(ple_ranger)",
+                                       "MOB(weibull)<br>(submod_weibull)", 
+                                       "Hazard Ratios<br>(param_HR)") )                        
                       
 kable( summ.table, caption = "Default PRISM Configurations (With Treatment)", full_width=T)
 
 summ.table = data.frame( `Step` = c("estimand(s)", "filter", "ple", "submod", "param"),
                         `gaussian` = c("E(Y)",
-                                       "filter_glmnet", "ple_ranger",
-                                       "submod_ctree", "param_lm"),
+                                       "Elastic Net<br>(filter_glmnet)", 
+                                       "Random Forest<br>(ple_ranger)",
+                                       "Conditional Inference Trees<br>submod_ctree",
+                                       "OLS<br>(param_lm)"),
                         `binomial` = c("Prob(Y)",
-                                       "filter_glmnet", "ple_ranger",
-                                       "submod_ctree", "param_lm"),    
-                        `survival` = c("RMST", "filter_glmnet", "ple_ranger",
-                                       "submod_ctree", "param_rmst") )                        
+                                       "Elastic Net<br>(filter_glmnet)", 
+                                       "Random Forest<br>(ple_ranger)",
+                                       "Conditional Inference Trees<br>submod_ctree", 
+                                       "OLS<br>(param_lm)"),    
+                        `survival` = c("RMST", "Elastic Net<br>(filter_glmnet)", 
+                                       "Random Forest<br>(ple_ranger)",
+                                       "Conditional Inference Trees<br>submod_ctree",
+                                       "RMST<br>(param_rmst)") )                        
                       
 kable( summ.table, caption = "Default PRISM Configurations (Without Treatment, A=NULL)", full_width=T)
 
@@ -36,6 +49,7 @@ library(ggplot2)
 library(dplyr)
 library(partykit)
 library(StratifiedMedicine)
+library(survival)
 dat_ctns = generate_subgrp_data(family="gaussian")
 Y = dat_ctns$Y
 X = dat_ctns$X # 50 covariates, 46 are noise variables, X1 and X2 are truly predictive
@@ -56,6 +70,7 @@ plot(res0) # same as plot(res0, type="submod")
 ## ----default_ctns_prog, warning=FALSE------------------------------------
 # PRISM Default: filter_glmnet, ple_ranger, submod_ctree, param_lm #
 res_prog = PRISM(Y=Y, X=X)
+# res_prog = PRISM(Y=Y, A=NULL, X=X) #also works
 summary(res_prog)
 plot(res_prog)
 
@@ -88,8 +103,8 @@ plot(res0, type="submod")
 plot(res0, type="forest")
 
 ## ----heat_maps-----------------------------------------------------------
-grid.data = expand.grid(X1 = seq(min(X$X1), max(X$X1), by=0.30),
-                    X2 = seq(min(X$X2), max(X$X2), by=0.30))
+grid.data = expand.grid(X1 = seq(min(X$X1), max(X$X1), by=1),
+                    X2 = seq(min(X$X2), max(X$X2), by=1))
 plot(res0, type="heatmap", grid.data = grid.data)
 
 
@@ -101,15 +116,25 @@ res_new_hyper = PRISM(Y=Y, A=A, X=X, filter.hyper = list(lambda="lambda.1se"),
                       submod.hyper = list(minsize=200), verbose=FALSE)
 plot(res_new_hyper)
 
+## ----default_binary------------------------------------------------------
+dat_bin = generate_subgrp_data(family="binomial", seed = 5558)
+Y = dat_bin$Y
+X = dat_bin$X # 50 covariates, 46 are noise variables, X1 and X2 are truly predictive
+A = dat_bin$A # binary treatment, 1:1 randomized 
+
+res0 = PRISM(Y=Y, A=A, X=X)
+summary(res0)
+plot(res0)
+
+
 ## ----default_surv--------------------------------------------------------
-library(survival)
-library(ggplot2)
 # Load TH.data (no treatment; generate treatment randomly to simulate null effect) ##
 data("GBSG2", package = "TH.data")
 surv.dat = GBSG2
 # Design Matrices ###
 Y = with(surv.dat, Surv(time, cens))
 X = surv.dat[,!(colnames(surv.dat) %in% c("time", "cens")) ]
+set.seed(6345)
 A = rbinom( n = dim(X)[1], size=1, prob=0.5  )
 
 # Default: filter_glmnet ==> ple_ranger (estimates patient-level RMST(1 vs 0) ==> submod_weibull (MOB with Weibull) ==> param_cox (Cox regression)
@@ -123,8 +148,6 @@ plot(res_ctree1)
 
 
 ## ----default_boot, warning=FALSE, message=FALSE--------------------------
-library(ggplot2)
-library(dplyr)
 res_boot = PRISM(Y=Y, A=A, X=X, resample = "Bootstrap", R=50, ple = "None")
 # Plot of distributions #
 plot(res_boot, type="resample", estimand = "HR(A=1 vs A=0)")+geom_vline(xintercept = 1)

@@ -19,9 +19,10 @@
 #' @param filter Maps (Y,A,X) => (Y,A,X.star) where X.star has potentially less
 #' covariates than X. Default is "filter_glmnet", "None" uses no filter.
 #' @param ple PLE (Patient-Level Estimate) function. Maps the observed data to PLEs.
-#' (Y,A,X) ==> PLE(X). Default for "gaussian"/"binomial" is "ple_ranger"
-#' (treatment-specific random forest models). The default for "survival" is
-#' "ple_glmnet" (elastic net (glmnet) cox regression). "None" uses no ple.
+#' (Y,A,X) ==> PLE(X). Default for is "ple_ranger". For continuous/binomial outcome data,
+#' this fits treatment specific random forest models. For survival outcome data, this 
+#' fits a single forest, with expanded covariate space (A, X, X*A). 
+#' (treatment-specific random forest models).  "None" uses no ple.
 #' @param submod Subgroup identification model function. Maps the observed data and/or PLEs
 #' to subgroups. Default of "gaussian"/"binomial" is "submod_lmtree" (MOB with OLS loss).
 #' Default for "survival" is "submod_weibull" (MOB with weibull loss). "None" uses no 
@@ -42,13 +43,13 @@
 #' @param prefilter_resamp Option to filter the covariate space (based on filter model) prior
 #' to resampling. Default=FALSE.
 #' @param resample Resampling method for resample-based estimates and variability metrics.
-#' Options include "Boostrap", "Permutation", and "CV" (cross-validation). 
+#' Options include "Bootstrap", "Permutation", and "CV" (cross-validation). 
 #' Default=NULL (No resampling).
 #' @param stratify Stratified resampling (Default=TRUE)
 #' @param R Number of resamples (default=NULL; R=100 for Permutation/Bootstrap and 
 #' R=5 for CV)
 #' @param calibrate Bootstrap calibration for nominal alpha (Loh et al 2016).
-#' Default=TRUE which outputs the calibrated alpha level and calibrated CIs for 
+#' Default=FALSE. For TRUE, outputs the calibrated alpha level and calibrated CIs for 
 #' the overall population and subgroups. Not applicable for permutation/CV resampling.
 #' @param alpha.mat Grid of alpha values for calibration. Default=NULL, which uses
 #' seq(alpha/1000,alpha,by=0.005) for alpha_ovrl/alpha_s. 
@@ -86,7 +87,7 @@
 #' ## Load library ##
 #' library(StratifiedMedicine)
 #'
-#' ##### Examples: Continuous Outcome ###########
+#' ## Examples: Continuous Outcome ##
 #'
 #' dat_ctns = generate_subgrp_data(family="gaussian")
 #' Y = dat_ctns$Y
@@ -120,6 +121,19 @@
 #'   plot(res_boot, type="resample", estimand = "E(Y|A=1)-E(Y|A=0)")+geom_vline(xintercept = 0)
 #'   aggregate(I(est>0)~Subgrps, data=res_boot$resamp.dist, FUN="mean")
 #' }
+#' 
+#' ## Examples: Binary Outcome ##
+#' \donttest{
+#' dat_ctns = generate_subgrp_data(family="binomial")
+#' Y = dat_ctns$Y
+#' X = dat_ctns$X
+#' A = dat_ctns$A
+#'
+#' # Run Default: filter_glmnet, ple_ranger, submod_glmtree, param_ple #
+#' res0 = PRISM(Y=Y, A=A, X=X)
+#' 
+#' plot(res0)
+#' }
 #'
 #' # Survival Data ##
 #' \donttest{
@@ -133,14 +147,14 @@
 #'   set.seed(513)
 #'   A = rbinom( n = dim(X)[1], size=1, prob=0.5  )
 #'
-#'   # Default: PRISM: glmnet ==> MOB (Weibull) ==> Cox; bootstrapping posterior prob/inference #
-#'   res_weibull1 = PRISM(Y=Y, A=A, X=X, ple=NULL, resample="Bootstrap", R=100,
+#'   # PRISM: glmnet ==> MOB (Weibull) ==> Cox; with bootstrap #
+#'   res_weibull1 = PRISM(Y=Y, A=A, X=X, ple="None", resample="Bootstrap", R=100,
 #'                        verbose.resamp = TRUE)
 #'   plot(res_weibull1)
 #'   plot(res_weibull1, type="resample", estimand = "HR(A=1 vs A=0)")+geom_vline(xintercept = 1)
 #'   aggregate(I(est<1)~Subgrps, data=res_weibull1$resamp.dist, FUN="mean")
 #'
-#'   # PRISM: ENET ==> CTREE ==> Cox; bootstrapping for posterior prob/inference #
+#'   # PRISM: ENET ==> CTREE ==> Cox; with bootstrap #
 #'   res_ctree1 = PRISM(Y=Y, A=A, X=X, ple=NULL, submod = "submod_ctree",
 #'                      resample="Bootstrap", R=100, verbose.resamp = TRUE)
 #'   plot(res_ctree1)
@@ -157,7 +171,7 @@ PRISM = function(Y, A=NULL, X, Xtest=NULL, family="gaussian",
                  filter.hyper=NULL, ple.hyper=NULL, submod.hyper = NULL,
                  param.hyper = NULL, bayes = NULL, prefilter_resamp=FALSE,
                  resample = NULL, stratify=TRUE,
-                 R = NULL, calibrate=TRUE, alpha.mat=NULL,
+                 R = NULL, calibrate=FALSE, alpha.mat=NULL,
                  filter.resamp = NULL, ple.resamp = NULL,
                  submod.resamp = NULL, verbose=TRUE,
                  verbose.resamp = FALSE, seed=777){
@@ -175,8 +189,13 @@ PRISM = function(Y, A=NULL, X, Xtest=NULL, family="gaussian",
   if (is.null(Xtest)){ Xtest = X   }
 
   ## Is the Outcome Survival? ##
-  if (is.Surv(Y) & family!="survival"){ family="survival"  }
-
+  if (is.Surv(Y)){
+    if (family!="survival"){ family = "survival" }
+  }
+  ## Is the outcome binary? #
+  if (!is.Surv(Y)){
+    if ( mean( unique(Y) %in% c(0,1) )==1 ){ family = "binomial" }
+  }
   # Missing data? #
   if ( sum(is.na(Y))>0 | sum(is.na(A))>0 | sum(is.na(X))>0 ){
     message("Missing Data (in outcome, treatment, or covariates)")
@@ -185,8 +204,9 @@ PRISM = function(Y, A=NULL, X, Xtest=NULL, family="gaussian",
   if (family=="gaussian" | family=="binomial"){
     if (is.null(ple) ){ ple = "ple_ranger" }
     if (is.null(submod) ){ 
+      if (family=="gaussian"){ submod = "submod_lmtree"}
+      if (family=="binomial"){ submod = "submod_glmtree"}
       if (is.null(A)){ submod = "submod_ctree" }
-      else { submod = "submod_lmtree" }
     }
     if (is.null(param) ){ 
       if (is.null(A)){ param = "param_lm" }
@@ -276,7 +296,7 @@ PRISM = function(Y, A=NULL, X, Xtest=NULL, family="gaussian",
               out.train = out.train,
               out.test = data.frame(Xtest, Subgrps=res0$Subgrps.test),
               Rules=res0$Rules,
-              param.dat = param.dat, resamp.dist = resamp.dist, 
+              param.dat = param.dat, resample=resample, resamp.dist = resamp.dist, 
               resamp.calib = resamp.calib,
               bayes.fun = bayes.fun, family = family,
               filter = filter, ple = ple, submod=submod, param=param,

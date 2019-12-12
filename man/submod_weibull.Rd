@@ -4,8 +4,8 @@
 \alias{submod_weibull}
 \title{Subgroup Identification: Model-based partitioning (Weibull)}
 \usage{
-submod_weibull(Y, A, X, Xtest, mu_train, minsize = floor(dim(X)[1] *
-  0.1), maxdepth = 4, ...)
+submod_weibull(Y, A, X, Xtest, mu_train, alpha = 0.05,
+  minsize = floor(dim(X)[1] * 0.1), maxdepth = 4, parm = NULL, ...)
 }
 \arguments{
 \item{Y}{The outcome variable. Must be numeric or survival (ex; Surv(time,cens) )}
@@ -18,10 +18,15 @@ submod_weibull(Y, A, X, Xtest, mu_train, minsize = floor(dim(X)[1] *
 
 \item{mu_train}{Patient-level estimates (See PLE_models)}
 
+\item{alpha}{Significance level for variable selection (default=0.05)}
+
 \item{minsize}{Minimum number of observations in a tree node.
 Default = floor( dim(train)[1]*0.05  )}
 
 \item{maxdepth}{Maximum depth of any node in the tree (default=4)}
+
+\item{parm}{Model parameters included in parameter instability tests 
+(default=NULL, all parameters)}
 
 \item{...}{Any additional parameters, not currently passed through.}
 }
@@ -37,10 +42,11 @@ Uses the MOB (with weibull loss function) algorithm to identify subgroups
 survival outcomes.
 }
 \examples{
-library(StratifiedMedicine)
 
 
 \donttest{
+library(StratifiedMedicine)
+
 ## Load TH.data (no treatment; generate treatment randomly to simulate null effect) ##
 data("GBSG2", package = "TH.data", envir = e <- new.env() )
 surv.dat = e$GBSG2

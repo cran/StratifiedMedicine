@@ -60,13 +60,12 @@ norm_norm <- function(PRISM.fit, alpha_ovrl, alpha_s,
         mu_B <- var_B * ( prior.mu/prior.var + obs.mu / (obs.var)    ) 
         alpha <- alpha_s
       }
-      post.prob <- 1-pnorm(0, mean = mu_B, sd = sqrt(var_B) )
       # Bayesian Intervals (q25, q75) #
       LCL <- qnorm( alpha/2, mean = mu_B, sd = sqrt(var_B) )
       UCL <- qnorm( 1-alpha/2, mean = mu_B, sd = sqrt(var_B) )
-      summ <- data.frame(Subgrps=s, N=ns, estimand=e,
-                        est = mu_B, SE = sqrt(var_B), 
-                        LCL=LCL, UCL = UCL, prob.ge0 = post.prob)
+      summ <- data.frame(Subgrps=s, estimand=e,
+                        est.bayes = mu_B, SE.bayes = sqrt(var_B), 
+                        LCL.bayes=LCL, UCL.bayes = UCL)
       return(summ)
     }
     param.B = lapply( c(unique(Subgrps),0), looper)
@@ -78,10 +77,7 @@ norm_norm <- function(PRISM.fit, alpha_ovrl, alpha_s,
     param.B = get_posterior_ests(param.dat=param.dat, e = e)
     bayes_param = suppressWarnings( bind_rows(bayes_param, param.B) )
   }
-  bayes_param = bayes_param[order(bayes_param$Subgrps, bayes_param$estimand),]
-  param.dat = suppressWarnings( 
-              bind_rows( data.frame(type = "obs", param.dat),
-                         data.frame(type = "bayes", bayes_param) ) )
+  param.dat <- left_join(param.dat, bayes_param, by=c("Subgrps", "estimand"))
   bayes.sim = function(mu, sd, n=100000){
     return( rnorm(n=n, mean = mu, sd = sd)  )
   }
@@ -206,30 +202,38 @@ resamp_metrics = function(param.dat, resamp_param, resamp_calib, resample){
       }
     }
     for (sub in unique(final_ests$Subgrps)){
-      if (sub<=0){ alpha = ifelse(calibrate, alpha.ovrl_c, alpha_ovrl) }
-      if (sub>0 ){ alpha = ifelse(calibrate, alpha.s_c, alpha_s) }
+      if (sub<=0){ alpha = alpha_ovrl }
+      if (sub>0 ){ alpha = alpha_s }
       hold = final_ests[final_ests$Subgrps==sub,]
       hold.R = resamp_param[resamp_param$Subgrps==sub & resamp_param$estimand==e,]
       est0 = hold$est
       est.vec = hold.R$est
-      est.R = mean(hold.R$est, na.rm=TRUE)
-      bias.R = mean(hold.R$bias, na.rm=TRUE)
-      final_ests$est_resamp[final_ests$Subgrps==sub] = est.R
-      final_ests$SE_resamp[final_ests$Subgrps==sub] = sd( est.vec, na.rm=TRUE)
-      ## Permutation p-value ##
+      ## Permutation (est, SE, p-value) ##
       if (resample=="Permutation"){
+        final_ests$est_resamp[final_ests$Subgrps==sub] = mean(hold.R$est, na.rm=TRUE)
+        final_ests$SE_resamp[final_ests$Subgrps==sub] = sd( est.vec, na.rm=TRUE)
         final_ests$pval_perm[final_ests$Subgrps==sub] =
           (sum(abs(est.vec)>abs(est0), na.rm=TRUE) + 1 ) / (length(na.omit(est.vec))+1)
       }
-      ## Bootstrap Covariance/acceleration/bias/smoothed SE ##
+      ## Bootstrap (smoothed est, SE, bias, pct CI) ##
       if (resample=="Bootstrap"){
-        # bias #
-        final_ests$bias.boot[final_ests$Subgrps==sub] = bias.R
-        ### Confidence Intervals (Pct) ###
+        final_ests$est_resamp[final_ests$Subgrps==sub] = mean(hold.R$est, na.rm=TRUE)
+        final_ests$SE_resamp[final_ests$Subgrps==sub] = sd( est.vec, na.rm=TRUE)
+        final_ests$bias.boot[final_ests$Subgrps==sub] = mean(hold.R$bias, na.rm=TRUE)
         quants = as.numeric(
           quantile(est.vec, probs=c(alpha/2, (1-alpha/2)), na.rm = TRUE) )
         final_ests$LCL.pct[final_ests$Subgrps==sub] = quants[1]
         final_ests$UCL.pct[final_ests$Subgrps==sub] = quants[2]
+      }
+      ## Cross-validation (Cross-fitting estimate) ##
+      if (resample=="CV"){
+        N.tot = sum(hold.R$N)
+        est.CF <- with(hold.R, weighted.mean(est, N))
+        SE.CF <- with(hold.R, sqrt(  sum( (N/N.tot)^2*SE^2) ) )
+        final_ests$est_resamp[final_ests$Subgrps==sub] = est.CF
+        final_ests$SE_resamp[final_ests$Subgrps==sub] = SE.CF
+        final_ests$LCL.CV[final_ests$Subgrps==sub] = est.CF - qnorm(1-alpha/2)*SE.CF
+        final_ests$UCL.CV[final_ests$Subgrps==sub] = est.CF + qnorm(1-alpha/2)*SE.CF
       }
     }
     return(final_ests)
@@ -247,57 +251,8 @@ logLik.survreg <- function(object, ...){
   structure(object$loglik[2], df = sum(object$df), class = "logLik")
 }
 
-## Ranger: RMST estimation ##
-ranger_rmst = function(preds, X, trt){
-  
-  if (!trt){
-    times = preds$unique.death.times
-    mu_hat = preds$survival
-    # Order times and calculate RMST #
-    ids <- order(times)
-    ple_hat = NULL
-    dim.length = ifelse(is.null(X), preds$num.samples, dim(X)[1])
-    for (ii in 1:dim.length){
-      ## Trt 1 ##
-      y <- mu_hat[ii,]
-      rmst <- sum(diff(times[ids])*zoo::rollmean(y[ids],2))
-      # Store #
-      ple_hat = c(ple_hat, rmst )
-    }
-    mu_hat = data.frame(PLE=ple_hat)
-  }
-  if (trt){
-    pred0 = preds$pred0
-    pred1 = preds$pred1
-    times0 = pred0$unique.death.times
-    mu0_hat = pred0$survival
-    times1 = pred1$unique.death.times
-    mu1_hat = pred1$survival
-    # Order times and calculate RMST (A=1 vs A=0) #
-    id1 <- order(times1)
-    id0 <- order(times0)
-    ple_hat = NULL
-    dim.length = ifelse(is.null(X), pred0$num.samples, dim(X)[1])
-    for (ii in 1:dim.length){
-      ## Trt 1 ##
-      y <- mu1_hat[ii,]
-      rmst1 <- sum(diff(times1[id1])*zoo::rollmean(y[id1],2))
-      ## Trt 0 ##
-      y <- mu0_hat[ii,]
-      rmst0 <- sum(diff(times0[id0])*zoo::rollmean(y[id0],2))
-      # Store #
-      ple_hat = c(ple_hat, (rmst1-rmst0) )
-    }
-    ## take average of individual survival probabilities for mu1_hat and mu0_hat ##
-    mu1_hat = apply(mu1_hat, 1, mean)
-    mu0_hat = apply(mu0_hat, 1, mean)
-    mu_hat = data.frame(mu1 = mu1_hat, mu0 = mu0_hat, PLE = ple_hat)
-  }
-  return(mu_hat)
-}
-
 ### RMST Estimation: based on survRM2 ###
-rmst_calc = function(time, status, tau=NULL){
+rmst_single = function(time, status, tau=NULL){
   if (is.null(tau)){
     tau = max(time)
   }
@@ -323,4 +278,14 @@ pval_convert <- function(p_value) {
   if (p_value < 0.001) return(c("p<0.001"))
   if (p_value >= 0.001) return(paste("p=",(round(p_value,3)),sep=""))
   else return("")
+}
+## RMST calculator: tau is RMST truncation time ##
+rmst_calc <- function(time, surv, tau){
+  idx = time <= tau
+  id.time = sort(c(time[idx], tau))
+  id.surv = surv[idx]
+  time.diff <- diff(c(0, id.time))
+  areas <- time.diff * c(1, id.surv)
+  rmst = sum(areas)
+  return(rmst)
 }

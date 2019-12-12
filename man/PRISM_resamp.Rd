@@ -35,9 +35,10 @@ match X.}
 covariates than X. Default is "filter_glmnet", "None" uses no filter.}
 
 \item{ple}{PLE (Patient-Level Estimate) function. Maps the observed data to PLEs.
-(Y,A,X) ==> PLE(X). Default for "gaussian"/"binomial" is "ple_ranger"
-(treatment-specific random forest models). The default for "survival" is
-"ple_glmnet" (elastic net (glmnet) cox regression). "None" uses no ple.}
+(Y,A,X) ==> PLE(X). Default for is "ple_ranger". For continuous/binomial outcome data,
+this fits treatment specific random forest models. For survival outcome data, this 
+fits a single forest, with expanded covariate space (A, X, X*A). 
+(treatment-specific random forest models).  "None" uses no ple.}
 
 \item{submod}{Subgroup identification model function. Maps the observed data and/or PLEs
 to subgroups. Default of "gaussian"/"binomial" is "submod_lmtree" (MOB with OLS loss).
@@ -66,7 +67,7 @@ perform inference through the input function (by name). Default for "gaussian"/"
 to resampling. Default=FALSE.}
 
 \item{resample}{Resampling method for resample-based estimates and variability metrics.
-Options include "Boostrap", "Permutation", and "CV" (cross-validation). 
+Options include "Bootstrap", "Permutation", and "CV" (cross-validation). 
 Default=NULL (No resampling).}
 
 \item{R}{Number of resamples (default=NULL; R=100 for Permutation/Bootstrap and 
@@ -75,7 +76,7 @@ R=5 for CV)}
 \item{stratify}{Stratified resampling (Default=TRUE)}
 
 \item{calibrate}{Bootstrap calibration for nominal alpha (Loh et al 2016).
-Default=TRUE which outputs the calibrated alpha level and calibrated CIs for 
+Default=FALSE. For TRUE, outputs the calibrated alpha level and calibrated CIs for 
 the overall population and subgroups. Not applicable for permutation/CV resampling.}
 
 \item{alpha.mat}{Grid of alpha values for calibration. Default=NULL, which uses

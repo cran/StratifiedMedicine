@@ -4,8 +4,9 @@
 \alias{submod_ctree}
 \title{Subgroup Identification: Conditional Inference Trees (ctree)}
 \usage{
-submod_ctree(Y, A, X, Xtest, mu_train, minbucket = floor(dim(X)[1] *
-  0.1), maxdepth = 4, outcome_PLE = FALSE, family = "gaussian", ...)
+submod_ctree(Y, A, X, Xtest, mu_train, alpha = 0.05,
+  minbucket = floor(dim(X)[1] * 0.1), maxdepth = 4,
+  outcome_PLE = FALSE, family = "gaussian", ...)
 }
 \arguments{
 \item{Y}{The outcome variable. Must be numeric or survival (ex; Surv(time,cens) )}
@@ -17,6 +18,8 @@ submod_ctree(Y, A, X, Xtest, mu_train, minbucket = floor(dim(X)[1] *
 \item{Xtest}{Test set}
 
 \item{mu_train}{Patient-level estimates (See PLE_models)}
+
+\item{alpha}{Significance level for variable selection (default=0.05)}
 
 \item{minbucket}{Minimum number of observations in a tree node.
 Default = floor( dim(train)[1]*0.05  )}
@@ -41,6 +44,8 @@ Uses the ctree (conditional inference trees) algorithm to identify subgroups
 Option to use the observed outcome or PLEs for subgroup identification.
 }
 \examples{
+
+\donttest{
 library(StratifiedMedicine)
 
 ## Continuous ##
@@ -53,6 +58,6 @@ res_ctree1 = submod_ctree(Y, A, X, Xtest=X, family="gaussian")
 res_ctree2 = submod_ctree(Y, A, X, Xtest=X, family="gaussian", maxdepth=2, minsize=100)
 plot(res_ctree1$mod)
 plot(res_ctree2$mod)
-
+}
 
 }

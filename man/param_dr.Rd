@@ -7,7 +7,7 @@
 param_dr(Y, A, X, mu_hat, Subgrps, alpha_ovrl, alpha_s, ...)
 }
 \arguments{
-\item{Y}{The outcome variable. Must be numeric or survival (ex; Surv(time,cens) )}
+\item{Y}{The outcome variable. Must be numeric (binary, continuous)}
 
 \item{A}{Treatment variable. (a=1,...A)}
 
@@ -24,9 +24,9 @@ param_dr(Y, A, X, mu_hat, Subgrps, alpha_ovrl, alpha_s, ...)
 \item{...}{Any additional parameters, not currently passed through.}
 }
 \value{
-Data-set with parameter estimates (average treatment effect) and corresponding
-variability metrics, for overall and subgroups. Subgrps=0 corresponds to the overall
-population by default.
+Data-set with parameter estimates and corresponding variability metrics, 
+for overall and subgroups. Subgrps=0 corresponds to the overall population by 
+default.
  \itemize{
   \item param.dat - Parameter estimates and variability metrics (est, SE,
   LCL/UCL = lower/upper confidence limits, pval = p-value).
@@ -34,8 +34,8 @@ population by default.
 }
 \description{
 For each identified subgroup and in the overall population, use the double robust
-estimator (Funk et al 2011). Usable for continuous and binary outcomes, specifically
-for the estimand E(Y|X,A=1)-E(Y|X,A=0).
+estimator (Funk et al 2011). For continuous and binary outcomes, this outputs 
+estimates for E(Y|A=1), E(Y|A=0), and E(Y|A=1)-E(Y|A=0).
 }
 \examples{
 library(StratifiedMedicine)

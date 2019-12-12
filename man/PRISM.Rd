@@ -9,7 +9,7 @@ PRISM(Y, A = NULL, X, Xtest = NULL, family = "gaussian",
   param = NULL, alpha_ovrl = 0.05, alpha_s = 0.05,
   filter.hyper = NULL, ple.hyper = NULL, submod.hyper = NULL,
   param.hyper = NULL, bayes = NULL, prefilter_resamp = FALSE,
-  resample = NULL, stratify = TRUE, R = NULL, calibrate = TRUE,
+  resample = NULL, stratify = TRUE, R = NULL, calibrate = FALSE,
   alpha.mat = NULL, filter.resamp = NULL, ple.resamp = NULL,
   submod.resamp = NULL, verbose = TRUE, verbose.resamp = FALSE,
   seed = 777)
@@ -35,9 +35,10 @@ match X.}
 covariates than X. Default is "filter_glmnet", "None" uses no filter.}
 
 \item{ple}{PLE (Patient-Level Estimate) function. Maps the observed data to PLEs.
-(Y,A,X) ==> PLE(X). Default for "gaussian"/"binomial" is "ple_ranger"
-(treatment-specific random forest models). The default for "survival" is
-"ple_glmnet" (elastic net (glmnet) cox regression). "None" uses no ple.}
+(Y,A,X) ==> PLE(X). Default for is "ple_ranger". For continuous/binomial outcome data,
+this fits treatment specific random forest models. For survival outcome data, this 
+fits a single forest, with expanded covariate space (A, X, X*A). 
+(treatment-specific random forest models).  "None" uses no ple.}
 
 \item{submod}{Subgroup identification model function. Maps the observed data and/or PLEs
 to subgroups. Default of "gaussian"/"binomial" is "submod_lmtree" (MOB with OLS loss).
@@ -69,7 +70,7 @@ Default=NULL.}
 to resampling. Default=FALSE.}
 
 \item{resample}{Resampling method for resample-based estimates and variability metrics.
-Options include "Boostrap", "Permutation", and "CV" (cross-validation). 
+Options include "Bootstrap", "Permutation", and "CV" (cross-validation). 
 Default=NULL (No resampling).}
 
 \item{stratify}{Stratified resampling (Default=TRUE)}
@@ -78,7 +79,7 @@ Default=NULL (No resampling).}
 R=5 for CV)}
 
 \item{calibrate}{Bootstrap calibration for nominal alpha (Loh et al 2016).
-Default=TRUE which outputs the calibrated alpha level and calibrated CIs for 
+Default=FALSE. For TRUE, outputs the calibrated alpha level and calibrated CIs for 
 the overall population and subgroups. Not applicable for permutation/CV resampling.}
 
 \item{alpha.mat}{Grid of alpha values for calibration. Default=NULL, which uses
@@ -123,7 +124,7 @@ at each step.
 ## Load library ##
 library(StratifiedMedicine)
 
-##### Examples: Continuous Outcome ###########
+## Examples: Continuous Outcome ##
 
 dat_ctns = generate_subgrp_data(family="gaussian")
 Y = dat_ctns$Y
@@ -158,6 +159,19 @@ plot(res3)
   aggregate(I(est>0)~Subgrps, data=res_boot$resamp.dist, FUN="mean")
 }
 
+## Examples: Binary Outcome ##
+\donttest{
+dat_ctns = generate_subgrp_data(family="binomial")
+Y = dat_ctns$Y
+X = dat_ctns$X
+A = dat_ctns$A
+
+# Run Default: filter_glmnet, ple_ranger, submod_glmtree, param_ple #
+res0 = PRISM(Y=Y, A=A, X=X)
+
+plot(res0)
+}
+
 # Survival Data ##
 \donttest{
   library(survival)
@@ -170,14 +184,14 @@ plot(res3)
   set.seed(513)
   A = rbinom( n = dim(X)[1], size=1, prob=0.5  )
 
-  # Default: PRISM: glmnet ==> MOB (Weibull) ==> Cox; bootstrapping posterior prob/inference #
-  res_weibull1 = PRISM(Y=Y, A=A, X=X, ple=NULL, resample="Bootstrap", R=100,
+  # PRISM: glmnet ==> MOB (Weibull) ==> Cox; with bootstrap #
+  res_weibull1 = PRISM(Y=Y, A=A, X=X, ple="None", resample="Bootstrap", R=100,
                        verbose.resamp = TRUE)
   plot(res_weibull1)
   plot(res_weibull1, type="resample", estimand = "HR(A=1 vs A=0)")+geom_vline(xintercept = 1)
   aggregate(I(est<1)~Subgrps, data=res_weibull1$resamp.dist, FUN="mean")
 
-  # PRISM: ENET ==> CTREE ==> Cox; bootstrapping for posterior prob/inference #
+  # PRISM: ENET ==> CTREE ==> Cox; with bootstrap #
   res_ctree1 = PRISM(Y=Y, A=A, X=X, ple=NULL, submod = "submod_ctree",
                      resample="Bootstrap", R=100, verbose.resamp = TRUE)
   plot(res_ctree1)

@@ -25,7 +25,15 @@ summ.table = data.frame( `Model` = c("filter", "ple", "submod", "param"),
 kable( summ.table, caption = "Key Outputs by Model" )
 
 ## ----user_filter_template------------------------------------------------
-model_template(type="filter")
+filter_template = function(Y, A, X, ...){
+  # Step 1: Fit Filter Model #
+  mod <- # model call 
+  # Step 2: Extract variables that pass the filter #
+  filter.vars <- # depends on mod fit
+  # Return model fit and filtered variables #
+  res = list(mod=mod, filter.vars=filter.vars)
+  return( res )
+}
 
 ## ----user_filter---------------------------------------------------------
 filter_lasso = function(Y, A, X, lambda="lambda.min", family="gaussian", ...){
@@ -33,7 +41,7 @@ filter_lasso = function(Y, A, X, lambda="lambda.min", family="gaussian", ...){
   ## Model matrix X matrix #
   X = model.matrix(~. -1, data = X )
 
-  ##### Elastic Net on estimated ITEs #####
+  ##### Elastic Net ##
   set.seed(6134)
   if (family=="survival") { family = "cox"  }
   mod <- cv.glmnet(x = X, y = Y, nlambda = 100, alpha=1, family=family)
@@ -46,7 +54,25 @@ filter_lasso = function(Y, A, X, lambda="lambda.min", family="gaussian", ...){
 }
 
 ## ----user_ple_template---------------------------------------------------
-model_template(type="ple")
+ple_template <- function(Y, A, X, Xtest, ...){
+  # Step 1: Fit PLE Model #
+  # for example: Estimate E(Y|A=1,X), E(Y|A=0,X), E(Y|A=1,X)-E(Y|A=0,X)
+  mod <- # ple model call 
+  # mod = list(mod0=mod0, mod1=mod1) # If multiple fitted models, combine into list
+  # Step 2: Predictions
+  # Option 1: Create a Prediction Function #
+  pred.fun <- function(mod, X){
+    mu_hat <- # data-frame of predictions 
+    return(mu_hat)
+  }
+  # Option 2: Directly Output Predictions (here, we still use pred.fun) #
+  mu_train <- pred.fun(mod, X)
+  mu_test <- pred.fun(mod, Xtest)
+      
+  # Return model fits and pred.fun (or just mu_train/mu_test) #
+  res <- list(mod=mod, pred.fun=pred.fun, mu_train=mu_train, mu_test=mu_test)
+  return( res )
+}
 
 ## ----user_ple------------------------------------------------------------
 ple_ranger_mtry = function(Y, A, X, Xtest, mtry=5, ...){
@@ -70,7 +96,23 @@ ple_ranger_mtry = function(Y, A, X, Xtest, mtry=5, ...){
 }
 
 ## ----user_submod_template------------------------------------------------
-model_template(type="submod")
+submod_template <- function(Y, A, X, Xtest, mu_train, ...){
+  # Step 1: Fit subgroup model #
+  mod <- # model call 
+  # Step 2: Predictions #
+  # Option 1: Create Prediction Function #
+  pred.fun <- function(mod, X=NULL){
+    Subgrps <- # Predict subgroup assignment
+    return( list(Subgrps=Subgrps) )
+  }
+  # Option 2: Output Subgroups for train/test (here we use pred.fun)
+  Subgrps.train = pred.fun(mod, X)
+  Subgrps.test = pred.fun(mod, X)
+  #Return fit and pred.fun (or just Subgrps.train/Subgrps.test)
+  res <- list(mod=mod, pred.fun=pred.fun, Subgrps.train=Subgrps.train,
+                  Subgrps.test=Subgrps.test)
+  return(res)
+}
 
 ## ----user_submod---------------------------------------------------------
 submod_lmtree_pred = function(Y, A, X, Xtest, mu_train, ...){
@@ -87,7 +129,24 @@ submod_lmtree_pred = function(Y, A, X, Xtest, mu_train, ...){
 }
 
 ## ----user_param_template-------------------------------------------------
-model_template(type="param")
+param_template <- function(Y, A, X, mu_hat, Subgrps, alpha_ovrl, alpha_s,...){
+  # Key Outputs: Subgroup specific and overall parameter estimates
+  # Overall/Subgroup Specific Estimate ##
+  looper = function(s, alpha){
+    # Extract parameter estimates #
+    return( summ )
+  }
+   # Across Subgroups #
+  S_levels = as.numeric( names(table(Subgrps)) )
+  param.dat = lapply(S_levels, looper, alpha_s)
+  param.dat = do.call(rbind, param.dat)
+  param.dat = data.frame( param.dat )
+  ## Overall ##
+  param.dat0 = looper(S_levels, alpha_ovrl)
+  # Combine and return ##
+  param.dat = rbind(param.dat0, param.dat)
+  return( param.dat )
+}
 
 ## ----user_param----------------------------------------------------------
 
@@ -95,34 +154,30 @@ model_template(type="param")
 param_rlm = function(Y, A, X, mu_hat, Subgrps, alpha_ovrl, alpha_s, ...){
   require(MASS)
   indata = data.frame(Y=Y,A=A, X)
-  mod.ovrl = rlm(Y ~ A , data=indata)
-  param.dat0 = data.frame( Subgrps=0, N = dim(indata)[1],
-                           estimand = "E(Y|A=1)-E(Y|A=0)",
-                           est = summary(mod.ovrl)$coefficients[2,1],
-                           SE = summary(mod.ovrl)$coefficients[2,2] )
-  param.dat0$LCL = with(param.dat0, est-qt(1-alpha_ovrl/2, N-1)*SE)
-  param.dat0$UCL = with(param.dat0, est+qt(1-alpha_ovrl/2, N-1)*SE)
-  param.dat0$pval = with(param.dat0, 2*pt(-abs(est/SE), df=N-1) )
 
   ## Subgroup Specific Estimate ##
-  looper = function(s){
-    rlm.mod = tryCatch( rlm(Y ~ A , data=indata[Subgrps==s,]),
+  looper = function(s, alpha){
+    rlm.mod = tryCatch( rlm(Y ~ A , data=indata[Subgrps %in% s,]),
                        error = function(e) "param error" )
-    n.s = dim(indata[Subgrps==s,])[1]
+    n.s = dim(indata[Subgrps %in% s,])[1]
     est = summary(rlm.mod)$coefficients[2,1]
     SE = summary(rlm.mod)$coefficients[2,2]
-    LCL =  est-qt(1-alpha_ovrl/2, n.s-1)*SE
-    UCL =  est+qt(1-alpha_ovrl/2, n.s-1)*SE
+    LCL =  est-qt(1-alpha/2, n.s-1)*SE
+    UCL =  est+qt(1-alpha/2, n.s-1)*SE
     pval = 2*pt(-abs(est/SE), df=n.s-1)
-    return( c(est, SE, LCL, UCL, pval) )
+    summ <- data.frame(Subgrps = ifelse(n.s==dim(X)[1], 0, s),
+                       N= n.s, est=est, SE=SE, LCL=LCL, UCL=UCL, pval=pval)
+    return( summ )
   }
+  # Across Subgroups #
   S_levels = as.numeric( names(table(Subgrps)) )
-  S_N = as.numeric( table(Subgrps) )
-  param.dat = lapply(S_levels, looper)
+  param.dat = lapply(S_levels, looper, alpha_s)
   param.dat = do.call(rbind, param.dat)
-  param.dat = data.frame( S = S_levels, N=S_N, estimand="E(Y|A=1)-E(Y|A=0)", param.dat)
-  colnames(param.dat) = c("Subgrps", "N", "estimand", "est", "SE", "LCL", "UCL", "pval")
-  param.dat = rbind( param.dat0, param.dat)
+  param.dat = data.frame( param.dat )
+  ## Overall ##
+  param.dat0 = looper(S_levels, alpha_ovrl)
+  # Combine and return ##
+  param.dat = rbind(param.dat0, param.dat)
   return( param.dat )
 }
 
@@ -135,9 +190,10 @@ res_user1 = PRISM(Y=Y, A=A, X=X, family="gaussian", filter="filter_lasso",
 ## variables that remain after filtering ##
 res_user1$filter.vars
 ## Subgroup model: lmtree searching for predictive only ##
-plot(res_user1$submod.fit$mod)
+plot(res_user1)
 ## Parameter estimates/inference
 res_user1$param.dat
-plot(res_user1, type="forest")
+## Waterfall plot of individual treatment effects
+plot(res_user1, type="PLE:waterfall")
 
 
