@@ -86,9 +86,9 @@ ple_ranger_mtry = function(Y, A, X, Xtest, mtry=5, ...){
     mod1 <- ranger(Y ~ ., data = train1, seed=2, mtry = mtry)
     mod = list(mod0=mod0, mod1=mod1)
     pred.fun <- function(mod, X){
-      mu1_hat <- predict( mod$mod1, X )$predictions
-      mu0_hat <- predict( mod$mod0, X )$predictions
-      mu_hat <- data.frame(mu1 = mu1_hat, mu0 = mu0_hat, PLE = mu1_hat-mu0_hat)
+      mu_1 <- predict( mod$mod1, X )$predictions
+      mu_0 <- predict( mod$mod0, X )$predictions
+      mu_hat <- data.frame(mu_1 = mu_1, mu_0 = mu_0, PLE = mu_1-mu_0)
       return(mu_hat)
       }
     res = list(mod=mod, pred.fun=pred.fun)
@@ -165,7 +165,8 @@ param_rlm = function(Y, A, X, mu_hat, Subgrps, alpha_ovrl, alpha_s, ...){
     LCL =  est-qt(1-alpha/2, n.s-1)*SE
     UCL =  est+qt(1-alpha/2, n.s-1)*SE
     pval = 2*pt(-abs(est/SE), df=n.s-1)
-    summ <- data.frame(Subgrps = ifelse(n.s==dim(X)[1], 0, s),
+    summ <- data.frame(estimand = "E(Y|A=1)-E(Y|A=0)", 
+                       Subgrps = ifelse(n.s==dim(X)[1], 0, s),
                        N= n.s, est=est, SE=SE, LCL=LCL, UCL=UCL, pval=pval)
     return( summ )
   }

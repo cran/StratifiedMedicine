@@ -62,7 +62,7 @@ dim(X)
 # PRISM Default: filter_glmnet, ple_ranger, submod_lmtree, param_ple #
 res0 = PRISM(Y=Y, A=A, X=X)
 summary(res0)
-plot(res0) # same as plot(res0, type="submod")
+plot(res0) # same as plot(res0, type="tree")
 ## This is the same as running ##
 # res1 = PRISM(Y=Y, A=A, X=X, family="gaussian", filter="filter_glmnet", 
 #              ple = "ple_ranger", submod = "submod_lmtree", param="param_ple")
@@ -83,9 +83,6 @@ res0$filter.vars
 
 ## ----default_ctns_ple----------------------------------------------------
 prob.PLE = mean(I(res0$mu_train$PLE>0))
-# Density Plot #
-plot(res0, type="PLE:density")+geom_vline(xintercept = 0) +
-     geom_text(x=1, y=0.4, label=paste("Prob(PLE>0)=", prob.PLE, sep=""))
 # Waterfall Plot #
 plot(res0, type="PLE:waterfall")+geom_vline(xintercept = 0) + 
   geom_text(x=200, y=1, label=paste("Prob(PLE>0)=", prob.PLE, sep=""))
@@ -99,14 +96,13 @@ table(res0$out.test$Subgrps)
 ## Overall/subgroup specific parameter estimates/inference
 res0$param.dat
 ## Forest plot: Overall/subgroup specific parameter estimates (CIs)
-plot(res0, type="submod")
+plot(res0, type="tree")
 plot(res0, type="forest")
 
 ## ----heat_maps-----------------------------------------------------------
-grid.data = expand.grid(X1 = seq(min(X$X1), max(X$X1), by=1),
-                    X2 = seq(min(X$X2), max(X$X2), by=1))
-plot(res0, type="heatmap", grid.data = grid.data)
-
+plot_dependence(res0, vars="X1")
+plot_dependence(res0, vars="X2")
+plot_dependence(res0, vars=c("X1", "X2"))
 
 ## ----default_hyper-------------------------------------------------------
 # PRISM Default: filter_glmnet, ple_ranger, submod_lmtree, param_ple #
