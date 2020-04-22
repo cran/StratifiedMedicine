@@ -19,8 +19,7 @@
 #' @return Trained random forest (ranger) model(s).
 #'  \itemize{
 #'   \item mod - trained model(s)
-#'   \item A - treatment variable (training set)
-#'   \item X - covariate space (training set)
+#'   \item pred.fun - Prediction function for trained model(s)
 #' }
 #' @references Wright, M. N. & Ziegler, A. (2017). ranger: A fast implementation of 
 #' random forests for high dimensional data in C++ and R. J Stat Softw 77:1-17. 
@@ -82,8 +81,8 @@ ple_ranger = function(Y, A, X, Xtest, family="gaussian",
     ## Random Forest models for each Treatment ##
     if (byTrt){
       looper <- function(a) {
-        train_a <- data.frame(Y=Y[A==a], X[A==a,])
-        mod_a <- ranger(Y ~ ., data = train_a, 
+        train_a <- data.frame(Y=Y[A==a], X[A==a, , drop=FALSE])
+        mod_a <- ranger(Y ~ 1+., data = train_a, 
                         min.node.size = min.node.pct*dim(train_a)[1])
         mod_a$A_lvl <- a
         return(mod_a)

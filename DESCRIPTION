@@ -1,7 +1,7 @@
 Package: StratifiedMedicine
 Type: Package
 Title: Stratified Medicine
-Version: 0.2.2
+Version: 0.2.3
 Author: Thomas Jemielita [aut, cre]
 Maintainer: Thomas Jemielita <thomasjemielita@gmail.com>
 Description: A toolkit for stratified medicine, subgroup identification, and precision medicine.
@@ -25,6 +25,6 @@ Suggests: knitr, rmarkdown, MASS, BART, randomForestSRC, grf, survRM2,
         TH.data, coin, rpart, testthat (>= 2.1.0)
 VignetteBuilder: knitr
 NeedsCompilation: no
-Packaged: 2020-03-01 06:25:25 UTC; thoma
+Packaged: 2020-04-19 23:21:15 UTC; thoma
 Repository: CRAN
-Date/Publication: 2020-03-01 06:50:08 UTC
+Date/Publication: 2020-04-22 12:02:09 UTC
