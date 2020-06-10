@@ -2,47 +2,8 @@
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  fig.width=11.5, fig.height=8.5
+  fig.width=9.5, fig.height=8.5
 )
-
-## ----table_steps, echo=FALSE---------------------------------------------
-library(knitr)
-summ.table = data.frame( `Step` = c("estimand(s)", "filter", "ple", "submod", "param"),
-                        `gaussian` = c("E(Y|A=0)<br>E(Y|A=1)<br>E(Y|A=1)-E(Y|A=0)",
-                                       "Elastic Net<br>(filter_glmnet)", 
-                                       "Random Forest<br>(ple_ranger)",
-                                       "MOB(OLS)<br>(submod_lmtree)", 
-                                       "Average of PLEs<br>(param_ple)"),
-                        `binomial` = c("E(Y|A=0)<br>E(Y|A=1)<br>E(Y|A=1)-E(Y|A=0)",
-                                       "Elastic Net<br>(filter_glmnet)", 
-                                       "Random Forest<br>(ple_ranger)",
-                                       "MOB(GLM)<br>(submod_glmtree)", 
-                                       "Average of PLEs<br>(param_ple)"),    
-                        `survival` = c("HR(A=1 vs A=0)",
-                                       "Elastic Net<br>(filter_glmnet)", 
-                                       "Random Forest<br>(ple_ranger)",
-                                       "MOB(weibull)<br>(submod_weibull)", 
-                                       "Hazard Ratios<br>(param_HR)") )                        
-                      
-kable( summ.table, caption = "Default PRISM Configurations (With Treatment)", full_width=T)
-
-summ.table = data.frame( `Step` = c("estimand(s)", "filter", "ple", "submod", "param"),
-                        `gaussian` = c("E(Y)",
-                                       "Elastic Net<br>(filter_glmnet)", 
-                                       "Random Forest<br>(ple_ranger)",
-                                       "Conditional Inference Trees<br>submod_ctree",
-                                       "OLS<br>(param_lm)"),
-                        `binomial` = c("Prob(Y)",
-                                       "Elastic Net<br>(filter_glmnet)", 
-                                       "Random Forest<br>(ple_ranger)",
-                                       "Conditional Inference Trees<br>submod_ctree", 
-                                       "OLS<br>(param_lm)"),    
-                        `survival` = c("RMST", "Elastic Net<br>(filter_glmnet)", 
-                                       "Random Forest<br>(ple_ranger)",
-                                       "Conditional Inference Trees<br>submod_ctree",
-                                       "RMST<br>(param_rmst)") )                        
-                      
-kable( summ.table, caption = "Default PRISM Configurations (Without Treatment, A=NULL)", full_width=T)
 
 ## ----sim_ctns, warning=FALSE, message=FALSE------------------------------
 library(ggplot2)
@@ -58,17 +19,98 @@ length(Y)
 table(A)
 dim(X)
 
+## ----filter_glmnet, warning=FALSE, message=FALSE-------------------------
+res_f <- filter_train(Y, A, X, filter="glmnet")
+res_f$filter.vars
+plot_importance(res_f)
+
+## ----filter_glmnet2, warning=FALSE, message=FALSE------------------------
+res_f2 <- filter_train(Y, A, X, filter="glmnet", hyper=list(interaction=T))
+res_f2$filter.vars
+plot_importance(res_f2)
+
+## ----ple_train, warning=FALSE, message=FALSE-----------------------------
+res_p1 <- ple_train(Y, A, X, ple="ranger", meta="X-learner")
+summary(res_p1$mu_train)
+plot_ple(res_p1, target = "diff_1_0") + 
+  ggtitle("Waterfall Plot: E(Y|A=1)-E(Y|A=0)") + ylab("E(Y|A=1)-E(Y|A=0)")
+plot_dependence(res_p1, X=X, vars="X1") + ylab("E(Y|A=1)-E(Y|A=0)")
+
+## ----ple_train2, warning=FALSE, message=FALSE----------------------------
+res_p2 <- ple_train(Y, A, X, ple="ranger", meta="T-learner", hyper=list(mtry=5))
+summary(res_p2$mu_train)
+plot_ple(res_p2, target = "diff_1_0") + 
+  ggtitle("Waterfall Plot: E(Y|A=1)-E(Y|A=0)") + ylab("E(Y|A=1)-E(Y|A=0)")
+plot_dependence(res_p2, X=X, vars=c("X1", "X2")) + 
+  ggtitle("Heat Map (By X1,X2): E(Y|A=1)-E(Y|A=0)")
+  ylab("E(Y|A=1)-E(Y|A=0)")
+
+## ----submod_train1, warning=FALSE, message=FALSE-------------------------
+res_s1 <- submod_train(Y, A, X, submod="lmtree")
+table(res_s1$Subgrps.train)
+plot(res_s1$fit$mod)
+
+## ----submod_train2, warning=FALSE, message=FALSE-------------------------
+res_s2 <- submod_train(Y, A, X, thres = ">0.10",
+                       mu_train=res_p2$mu_train, submod="otr")
+plot(res_s2$fit$mod)
+
+## ----param1, warning=FALSE, message=FALSE--------------------------------
+param.dat1 <- param_est(Y, A, X, Subgrps = res_s1$Subgrps.train, param="lm")
+param.dat1 %>% filter(estimand=="mu_1-mu_0")
+
+## ----param2, warning=FALSE, message=FALSE--------------------------------
+param.dat2 <- param_est(Y, A, X, Subgrps = res_s1$Subgrps.train, 
+                        mu_hat = res_p1$mu_train, param="dr")
+param.dat2 %>% filter(estimand=="mu_1-mu_0")
+
+## ----table_steps, echo=FALSE---------------------------------------------
+library(knitr)
+summ.table = data.frame( `Step` = c("estimand(s)", "filter", "ple", "submod", "param"),
+                        `gaussian` = c("E(Y|A=0)<br>E(Y|A=1)<br>E(Y|A=1)-E(Y|A=0)",
+                                       "Elastic Net<br>(glmnet)", 
+                                       "X-learner: Random Forest<br>(ranger)",
+                                       "MOB(OLS)<br>(lmtree)", 
+                                       "Double Robust<br>(dr)"),
+                        `binomial` = c("E(Y|A=0)<br>E(Y|A=1)<br>E(Y|A=1)-E(Y|A=0)",
+                                       "Elastic Net<br>(glmnet)", 
+                                       "X-learner: Random Forest<br>(ranger)",
+                                       "MOB(GLM)<br>(glmtree)", 
+                                       "Doubly Robust<br>(dr)"),    
+                        `survival` = c("HR(A=1 vs A=0)",
+                                       "Elastic Net<br>(glmnet)", 
+                                       "T-learner: Random Forest<br>(ranger)",
+                                       "MOB(weibull)<br>(mob_weib)", 
+                                       "Hazard Ratios<br>(cox)") )                        
+                      
+kable( summ.table, caption = "Default PRISM Configurations (With Treatment)", full_width=T)
+
+summ.table = data.frame(`Step` = c("estimand(s)", "filter", "ple", "submod", "param"),
+                        `gaussian` = c("E(Y)",
+                                       "Elastic Net<br>(glmnet)", 
+                                       "Random Forest<br>(ranger)",
+                                       "Conditional Inference Trees<br>(ctree)",
+                                       "OLS<br>(lm)"),
+                        `binomial` = c("Prob(Y)",
+                                       "Elastic Net<br>(glmnet)", 
+                                       "Random Forest<br>(ranger)",
+                                       "Conditional Inference Trees<br>(ctree)", 
+                                       "OLS<br>(lm)"),    
+                        `survival` = c("RMST", "Elastic Net<br>(glmnet)", 
+                                       "Random Forest<br>(ranger)",
+                                       "Conditional Inference Trees<br>(ctree)",
+                                       "RMST<br>(rmst)"))                        
+                      
+kable( summ.table, caption = "Default PRISM Configurations (Without Treatment, A=NULL)", full_width=T)
+
 ## ----default_ctns, warning=FALSE-----------------------------------------
-# PRISM Default: filter_glmnet, ple_ranger, submod_lmtree, param_ple #
+# PRISM Default: filter_glmnet, ranger, lmtree, param_ple #
 res0 = PRISM(Y=Y, A=A, X=X)
 summary(res0)
 plot(res0) # same as plot(res0, type="tree")
-## This is the same as running ##
-# res1 = PRISM(Y=Y, A=A, X=X, family="gaussian", filter="filter_glmnet", 
-#              ple = "ple_ranger", submod = "submod_lmtree", param="param_ple")
 
 ## ----default_ctns_prog, warning=FALSE------------------------------------
-# PRISM Default: filter_glmnet, ple_ranger, submod_ctree, param_lm #
+# PRISM Default: filter_glmnet, ranger, ctree, param_lm #
 res_prog = PRISM(Y=Y, X=X)
 # res_prog = PRISM(Y=Y, A=NULL, X=X) #also works
 summary(res_prog)
@@ -80,12 +122,11 @@ plot(res0$filter.mod)
 ## Variables that remain after filtering ##
 res0$filter.vars
 # All predictive variables (X1,X2) and prognostic variables (X3,X5, X7) remains.
+plot_importance(res0)
 
 ## ----default_ctns_ple----------------------------------------------------
-prob.PLE = mean(I(res0$mu_train$PLE>0))
-# Waterfall Plot #
-plot(res0, type="PLE:waterfall")+geom_vline(xintercept = 0) + 
-  geom_text(x=200, y=1, label=paste("Prob(PLE>0)=", prob.PLE, sep=""))
+plot_ple(res0)
+plot_dependence(res0, vars=c("X2"))
 
 ## ----default_ctns_submod-------------------------------------------------
 plot(res0$submod.fit$mod, terminal_panel = NULL)
@@ -97,15 +138,9 @@ table(res0$out.test$Subgrps)
 res0$param.dat
 ## Forest plot: Overall/subgroup specific parameter estimates (CIs)
 plot(res0, type="tree")
-plot(res0, type="forest")
-
-## ----heat_maps-----------------------------------------------------------
-plot_dependence(res0, vars="X1")
-plot_dependence(res0, vars="X2")
-plot_dependence(res0, vars=c("X1", "X2"))
 
 ## ----default_hyper-------------------------------------------------------
-# PRISM Default: filter_glmnet, ple_ranger, submod_lmtree, param_ple #
+# PRISM Default: glmnet, ranger, lmtree, dr #
 # Change hyper-parameters #
 res_new_hyper = PRISM(Y=Y, A=A, X=X, filter.hyper = list(lambda="lambda.1se"),
                       ple.hyper = list(min.node.pct=0.05), 
@@ -122,7 +157,6 @@ res0 = PRISM(Y=Y, A=A, X=X)
 summary(res0)
 plot(res0)
 
-
 ## ----default_surv--------------------------------------------------------
 # Load TH.data (no treatment; generate treatment randomly to simulate null effect) ##
 data("GBSG2", package = "TH.data")
@@ -131,20 +165,15 @@ surv.dat = GBSG2
 Y = with(surv.dat, Surv(time, cens))
 X = surv.dat[,!(colnames(surv.dat) %in% c("time", "cens")) ]
 set.seed(6345)
-A = rbinom( n = dim(X)[1], size=1, prob=0.5  )
+A = rbinom(n = dim(X)[1], size=1, prob=0.5)
 
-# Default: filter_glmnet ==> ple_ranger (estimates patient-level RMST(1 vs 0) ==> submod_weibull (MOB with Weibull) ==> param_cox (Cox regression)
-res_weibull1 = PRISM(Y=Y, A=A, X=X)
-plot(res_weibull1, type="PLE:waterfall")
-plot(res_weibull1)
-
-# PRISM: filter_glmnet ==> submod_ctree ==> param_cox (Cox regression) #
-res_ctree1 = PRISM(Y=Y, A=A, X=X, submod = "submod_ctree")
-plot(res_ctree1)
-
+# Default: glmnet ==> ranger (estimates patient-level RMST(1 vs 0) ==> mob_weib (MOB with Weibull) ==> cox (Cox regression)
+res_weib = PRISM(Y=Y, A=A, X=X)
+plot(res_weib, type="PLE:waterfall")
+plot(res_weib)
 
 ## ----default_boot, warning=FALSE, message=FALSE--------------------------
-res_boot = PRISM(Y=Y, A=A, X=X, resample = "Bootstrap", R=50, ple = "None")
+res_boot = PRISM(Y=Y, A=A, X=X, resample = "Bootstrap", R=50, ple="None")
 # Plot of distributions #
 plot(res_boot, type="resample", estimand = "HR(A=1 vs A=0)")+geom_vline(xintercept = 1)
 
