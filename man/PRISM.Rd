@@ -4,15 +4,40 @@
 \alias{PRISM}
 \title{PRISM: Patient Response Identifier for Stratified Medicine}
 \usage{
-PRISM(Y, A = NULL, X, Xtest = NULL, family = "gaussian",
-  filter = "glmnet", ple = "ranger", submod = NULL, param = NULL,
-  meta = "X-learner", pool = "no", delta = ">0", alpha_ovrl = 0.05,
-  alpha_s = 0.05, filter.hyper = NULL, ple.hyper = NULL,
-  submod.hyper = NULL, param.hyper = NULL, bayes = NULL,
-  prefilter_resamp = FALSE, resample = NULL, stratify = TRUE,
-  R = NULL, calibrate = FALSE, alpha.mat = NULL,
-  filter.resamp = NULL, ple.resamp = NULL, submod.resamp = NULL,
-  verbose = TRUE, verbose.resamp = FALSE, seed = 777)
+PRISM(
+  Y,
+  A = NULL,
+  X,
+  Xtest = NULL,
+  family = "gaussian",
+  filter = "glmnet",
+  ple = "ranger",
+  submod = NULL,
+  param = NULL,
+  meta = "X-learner",
+  pool = "no",
+  delta = ">0",
+  propensity = FALSE,
+  alpha_ovrl = 0.05,
+  alpha_s = 0.05,
+  filter.hyper = NULL,
+  ple.hyper = NULL,
+  submod.hyper = NULL,
+  param.hyper = NULL,
+  bayes = NULL,
+  prefilter_resamp = FALSE,
+  resample = NULL,
+  stratify = TRUE,
+  R = NULL,
+  calibrate = FALSE,
+  alpha.mat = NULL,
+  filter.resamp = NULL,
+  ple.resamp = NULL,
+  submod.resamp = NULL,
+  verbose = TRUE,
+  verbose.resamp = FALSE,
+  seed = 777
+)
 }
 \arguments{
 \item{Y}{The outcome variable. Must be numeric or survival (ex; Surv(time,cens) )}
@@ -46,7 +71,7 @@ binary treatments or A=NULL.}
 
 \item{param}{Parameter estimation and inference function. Based on the discovered 
 subgroups, estimate parameter estimates and correspond variability metrics. Options
-include "lm" (unadjusted linear regression), "dr" (doubly-robust estimators),
+include "lm" (unadjusted linear regression), "dr" (doubly-robust estimator),
 "ple" (G-computation, average the patient-level estimates), "cox" (cox regression),
 and "rmst" (RMST based estimates as in survRMST package). Default for "gaussian",
 "binomial" is "dr", while default for "survival" is "cox". Currently only available 
@@ -66,6 +91,9 @@ used to assign optimal treatments across the discovered subgroups.}
 
 \item{delta}{Threshold for defining benefit vs non-benefitting patients. Only applicable 
 for pool="otr:logistic" or "otr:rf"; Default=">0".}
+
+\item{propensity}{Propensity score estimation, P(A=a|X). Default=FALSE which use the 
+marginal estimates, P(A=a) (applicable for RCT data). If TRUE, will use "ple" base learner.}
 
 \item{alpha_ovrl}{Two-sided alpha level for overall population. Default=0.05}
 

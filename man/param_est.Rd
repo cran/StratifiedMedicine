@@ -4,8 +4,18 @@
 \alias{param_est}
 \title{Parameter Estimation: Across Subgroups}
 \usage{
-param_est(Y, A, X, param, mu_hat = NULL, Subgrps, alpha_ovrl = 0.05,
-  alpha_s = 0.05, combine = "SS", ...)
+param_est(
+  Y,
+  A,
+  X,
+  param,
+  mu_hat = NULL,
+  Subgrps,
+  alpha_ovrl = 0.05,
+  alpha_s = 0.05,
+  combine = "SS",
+  ...
+)
 }
 \arguments{
 \item{Y}{The outcome variable. Must be numeric or survival (ex; Surv(time,cens) )}
@@ -17,7 +27,7 @@ factor). "ple_train" accomodates >2 along with binary treatments.}
 
 \item{param}{Parameter estimation and inference function. Based on the discovered 
 subgroups, estimate parameter estimates and correspond variability metrics. Options
-include "lm" (unadjusted linear regression), "dr" (doubly-robust estimators),
+include "lm" (unadjusted linear regression), "dr" (doubly-robust estimator),
 "ple" (G-computation, average the patient-level estimates), "cox" (cox regression),
 and "rmst" (RMST based estimates as in survRMST package). Default for "gaussian",
 "binomial" is "dr", while default for "survival" is "cox". Currently only available 

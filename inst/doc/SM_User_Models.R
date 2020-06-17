@@ -1,18 +1,18 @@
-## ---- include = FALSE----------------------------------------------------
+## ---- include = FALSE---------------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
   fig.width=9.5, fig.height=8.5 
 )
 
-## ----sim_ctns0-----------------------------------------------------------
+## ----sim_ctns0----------------------------------------------------------------
 library(StratifiedMedicine)
 dat_ctns = generate_subgrp_data(family="gaussian")
 Y = dat_ctns$Y
 X = dat_ctns$X # 50 covariates, 46 are noise variables, X1 and X2 are truly predictive
 A = dat_ctns$A # binary treatment, 1:1 randomized 
 
-## ----table_steps, echo=FALSE---------------------------------------------
+## ----table_steps, echo=FALSE--------------------------------------------------
 library(knitr)
 summ.table = data.frame( `Model` = c("filter", "ple", "submod", "param"),
                         `Required Outputs` = c("filter.vars", "list(mod,pred.fun)",
@@ -24,7 +24,7 @@ summ.table = data.frame( `Model` = c("filter", "ple", "submod", "param"),
                                           "Parameter Estimates") )
 kable( summ.table, caption = "Key Outputs by Model" )
 
-## ----user_filter_template------------------------------------------------
+## ----user_filter_template-----------------------------------------------------
 filter_template = function(Y, A, X, ...){
   # Step 1: Fit Filter Model #
   mod <- # model call 
@@ -35,7 +35,7 @@ filter_template = function(Y, A, X, ...){
   return( res )
 }
 
-## ----user_filter---------------------------------------------------------
+## ----user_filter--------------------------------------------------------------
 filter_lasso = function(Y, A, X, lambda="lambda.min", family="gaussian", ...){
   require(glmnet)
   ## Model matrix X matrix #
@@ -53,7 +53,7 @@ filter_lasso = function(Y, A, X, lambda="lambda.min", family="gaussian", ...){
   return( list(filter.vars=filter.vars) )
 }
 
-## ----user_ple_template---------------------------------------------------
+## ----user_ple_template--------------------------------------------------------
 ple_template <- function(Y, A, X, ...){
   # Step 1: Fit PLE Model #
   # for example: Estimate E(Y|A=1,X), E(Y|A=0,X), E(Y|A=1,X)-E(Y|A=0,X)
@@ -74,7 +74,7 @@ ple_template <- function(Y, A, X, ...){
   return( res )
 }
 
-## ----user_ple------------------------------------------------------------
+## ----user_ple-----------------------------------------------------------------
 ple_ranger_mtry = function(Y, X, mtry=5, ...){
    require(ranger)
     train =  data.frame(Y=Y, X)
@@ -89,7 +89,7 @@ ple_ranger_mtry = function(Y, X, mtry=5, ...){
     return(res)
 }
 
-## ----user_submod_template------------------------------------------------
+## ----user_submod_template-----------------------------------------------------
 submod_template <- function(Y, A, X, Xtest, mu_train, ...){
   # Step 1: Fit subgroup model #
   mod <- # model call 
@@ -108,7 +108,7 @@ submod_template <- function(Y, A, X, Xtest, mu_train, ...){
   return(res)
 }
 
-## ----user_submod---------------------------------------------------------
+## ----user_submod--------------------------------------------------------------
 submod_lmtree_pred = function(Y, A, X, mu_train, ...){
   require(partykit)
   ## Fit Model ##
@@ -122,7 +122,7 @@ submod_lmtree_pred = function(Y, A, X, mu_train, ...){
   return(list(mod=mod, pred.fun=pred.fun))
 }
 
-## ----user_param_template-------------------------------------------------
+## ----user_param_template------------------------------------------------------
 param_template <- function(Y, A, X, mu_hat, alpha,...){
   # Key Outputs: Subgroup specific and overall parameter estimates
   mod <- # Call parameter model #
@@ -132,7 +132,7 @@ param_template <- function(Y, A, X, mu_hat, alpha,...){
   return(param.dat)
 }
 
-## ----user_param----------------------------------------------------------
+## ----user_param---------------------------------------------------------------
 ### Robust linear Regression: E(Y|A=1) - E(Y|A=0) ###
 param_rlm = function(Y, A, alpha, ...){
   require(MASS)
@@ -151,7 +151,7 @@ param_rlm = function(Y, A, alpha, ...){
 }
 
 
-## ----user_SM_final, warnings=FALSE, message=FALSE------------------------
+## ----user_SM_final, warnings=FALSE, message=FALSE-----------------------------
 step1 <- filter_train(Y, A, X, filter="filter_lasso")
 X.star <- X[,colnames(X) %in% step1$filter.vars]
 step2 <- ple_train(Y, A, X.star, ple = "ple_ranger_mtry")
