@@ -24,7 +24,7 @@ res_f <- filter_train(Y, A, X, filter="glmnet")
 res_f$filter.vars
 plot_importance(res_f)
 
-## ----filter_glmnet2, warning=FALSE, message=FALSE-----------------------------
+## ----filter_glmnet2, warning=FALSE, message=FALSE, include=FALSE--------------
 res_f2 <- filter_train(Y, A, X, filter="glmnet", hyper=list(interaction=T))
 res_f2$filter.vars
 plot_importance(res_f2)
@@ -39,8 +39,6 @@ plot_dependence(res_p1, X=X, vars="X1") + ylab("E(Y|A=1)-E(Y|A=0)")
 ## ----ple_train2, warning=FALSE, message=FALSE---------------------------------
 res_p2 <- ple_train(Y, A, X, ple="ranger", meta="T-learner", hyper=list(mtry=5))
 summary(res_p2$mu_train)
-plot_ple(res_p2, target = "diff_1_0") + 
-  ggtitle("Waterfall Plot: E(Y|A=1)-E(Y|A=0)") + ylab("E(Y|A=1)-E(Y|A=0)")
 plot_dependence(res_p2, X=X, vars=c("X1", "X2")) + 
   ggtitle("Heat Map (By X1,X2): E(Y|A=1)-E(Y|A=0)")
   ylab("E(Y|A=1)-E(Y|A=0)")
@@ -51,8 +49,8 @@ table(res_s1$Subgrps.train)
 plot(res_s1$fit$mod)
 
 ## ----submod_train2, warning=FALSE, message=FALSE------------------------------
-res_s2 <- submod_train(Y, A, X, thres = ">0.10",
-                       mu_train=res_p2$mu_train, submod="otr")
+res_s2 <- submod_train(Y, A, X,  mu_train=res_p2$mu_train, 
+                       submod="otr", hyper=list(thres=">0.10"))
 plot(res_s2$fit$mod)
 
 ## ----param1, warning=FALSE, message=FALSE-------------------------------------
@@ -104,7 +102,7 @@ summ.table = data.frame(`Step` = c("estimand(s)", "filter", "ple", "submod", "pa
 kable( summ.table, caption = "Default PRISM Configurations (Without Treatment, A=NULL)", full_width=T)
 
 ## ----default_ctns, warning=FALSE----------------------------------------------
-# PRISM Default: filter_glmnet, ranger, lmtree, param_ple #
+# PRISM Default: filter_glmnet, ranger, lmtree, dr #
 res0 = PRISM(Y=Y, A=A, X=X)
 summary(res0)
 plot(res0) # same as plot(res0, type="tree")
@@ -114,9 +112,8 @@ plot(res0) # same as plot(res0, type="tree")
 res_prog = PRISM(Y=Y, X=X)
 # res_prog = PRISM(Y=Y, A=NULL, X=X) #also works
 summary(res_prog)
-plot(res_prog)
 
-## ----default_ctns_filter------------------------------------------------------
+## ----default_ctns_filter, include=FALSE---------------------------------------
 # elastic net model: loss by lambda #
 plot(res0$filter.mod)
 ## Variables that remain after filtering ##
@@ -125,6 +122,7 @@ res0$filter.vars
 plot_importance(res0)
 
 ## ----default_ctns_ple---------------------------------------------------------
+summary(res0$mu_train)
 plot_ple(res0)
 plot_dependence(res0, vars=c("X2"))
 
@@ -136,8 +134,6 @@ table(res0$out.test$Subgrps)
 ## ----default_ctns2------------------------------------------------------------
 ## Overall/subgroup specific parameter estimates/inference
 res0$param.dat
-## Forest plot: Overall/subgroup specific parameter estimates (CIs)
-plot(res0, type="tree")
 
 ## ----default_hyper------------------------------------------------------------
 # PRISM Default: glmnet, ranger, lmtree, dr #
@@ -145,7 +141,7 @@ plot(res0, type="tree")
 res_new_hyper = PRISM(Y=Y, A=A, X=X, filter.hyper = list(lambda="lambda.1se"),
                       ple.hyper = list(min.node.pct=0.05), 
                       submod.hyper = list(minsize=200), verbose=FALSE)
-plot(res_new_hyper)
+summary(res_new_hyper)
 
 ## ----default_binary-----------------------------------------------------------
 dat_bin = generate_subgrp_data(family="binomial", seed = 5558)
@@ -174,6 +170,7 @@ plot(res_weib)
 
 ## ----default_boot, warning=FALSE, message=FALSE-------------------------------
 res_boot = PRISM(Y=Y, A=A, X=X, resample = "Bootstrap", R=50, ple="None")
+summary(res_boot)
 # Plot of distributions #
 plot(res_boot, type="resample", estimand = "HR(A=1 vs A=0)")+geom_vline(xintercept = 1)
 
