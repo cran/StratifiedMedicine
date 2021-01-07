@@ -49,7 +49,7 @@ the candidate subgroups as covariates, and weights=abs(PLE). Lastly, the youden 
 used to assign optimal treatments across the discovered subgroups.}
 
 \item{delta}{Threshold for defining benefit vs non-benefitting patients. Only applicable 
-for pool="otr:logistic" or "otr:rf"; Default=">0".}
+for submod="otr", and pool="otr:logistic" or "otr:rf"; Default=">0".}
 
 \item{...}{Any additional parameters, not currently passed through.}
 }

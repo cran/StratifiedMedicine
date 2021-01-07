@@ -79,7 +79,7 @@
 #'  Software, Vol. 33(1), 1-22 Feb 2010 Vol. 33(1), 1-22 Feb 2010.
 #' @references Wright, M. N. & Ziegler, A. (2017). ranger: A fast implementation of 
 #' random forests for high dimensional data in C++ and R. J Stat Softw 77:1-17. 
-#' \url{https://doi.org/10.18637/jss.v077.i01}.
+#' \doi{10.18637/jss.v077.i01}.
 #' @references Ishwaran, H. Lu, M. (2017). Standard errors and confidence intervals 
 #' for variable importance in random forest regression, classification, and survival.
 #' Statistics in Medicine 2017. 

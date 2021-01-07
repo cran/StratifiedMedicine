@@ -26,7 +26,8 @@
 #' estimating patient-level treatment differences. Options include "T-learner" (treatment
 #' specific models), "S-learner" (single model), and "X-learner". For family="gaussian" &
 #' "binomial", the default is "X-learner", which uses a two-stage regression 
-#' approach (See Kunzel et al 2019). For "survival", the default is "T-learner". 
+#' approach (See Kunzel et al 2019). For "survival", the default is "T-learner". "X-learner" 
+#' is currently not supported for survival outcomes.
 #' @param submod Subgroup identification model function. Maps the observed data and/or PLEs
 #' to subgroups. Default for family="gaussian" is "lmtree" (MOB with OLS loss). For 
 #' "binomial" the default is "glmtree" (MOB with binomial loss). Default for "survival" is
@@ -45,7 +46,7 @@
 #' the candidate subgroups as covariates, and weights=abs(PLE). Lastly, the youden index is 
 #' used to assign optimal treatments across the discovered subgroups.
 #' @param delta Threshold for defining benefit vs non-benefitting patients. Only applicable 
-#' for pool="otr:logistic" or "otr:rf"; Default=">0".
+#' for submod="otr", and pool="otr:logistic" or "otr:rf"; Default=">0".
 #' @param propensity Propensity score estimation, P(A=a|X). Default=FALSE which use the 
 #' marginal estimates, P(A=a) (applicable for RCT data). If TRUE, will use "ple" base learner. 
 #' @param alpha_ovrl Two-sided alpha level for overall population. Default=0.05
@@ -163,7 +164,7 @@
 #' 15(3), 651–674.
 #' @references Wright, M. N. & Ziegler, A. (2017). ranger: A fast implementation of 
 #' random forests for high dimensional data in C++ and R. J Stat Softw 77:1-17. 
-#' \url{https://doi.org/10.18637/jss.v077.i01}.
+#' \doi{10.18637/jss.v077.i01}.
 #' @references Zeileis A, Hothorn T, Hornik K (2008). Model-Based Recursive Partitioning. 
 #' Journal of Computational and Graphical Statistics, 17(2), 492–514.
 #' @examples
@@ -256,7 +257,7 @@
 ##### PRISM: Patient Responder Identifiers for Stratified Medicine ########
 PRISM = function(Y, A=NULL, X, Xtest=NULL, family="gaussian",
                  filter="glmnet", ple="ranger", submod=NULL, param=NULL,
-                 meta = "X-learner",
+                 meta = ifelse(family=="survival", "T-learner", "X-learner"),
                  pool="no", delta = ">0", 
                  propensity = FALSE,
                  alpha_ovrl=0.05, alpha_s = 0.05,
@@ -314,6 +315,10 @@ PRISM = function(Y, A=NULL, X, Xtest=NULL, family="gaussian",
     if (is.null(param)) { 
       if (is.null(A)) {param = "rmst"}
       else {param = "cox"}
+    }
+    # Use T-learner if X-learner is specified #
+    if (meta=="X-learner") {
+      meta = "T-learner"
     }
   }
   
@@ -412,6 +417,7 @@ PRISM = function(Y, A=NULL, X, Xtest=NULL, family="gaussian",
              resamp.calib = resamp.calib,
              bayes.fun = bayes.fun, family = family,
              filter = filter, ple = ple, submod=submod, param=param,
+             meta = meta,
              alpha_ovrl = alpha_ovrl, alpha_s = alpha_s)
   class(res) <- c("PRISM")
   return(res)

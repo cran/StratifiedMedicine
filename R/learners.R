@@ -430,18 +430,25 @@ submod_ctree = function(Y, A, X, mu_train, alpha=0.10,
   ## Return Results ##
   return(  res )
 }
-## OTR: I(PLE>thres) ~ X, weights = abs(PLE), with CTREE ###
+## OTR: I(PLE>delta) ~ X, weights = abs(PLE), with CTREE ###
 submod_otr = function(Y, A, X, mu_train, alpha=0.10,
                       minbucket = floor(dim(X)[1]*0.10),
-                      maxdepth = 4, thres=">0", ...){
+                      maxdepth = 4, delta=">0", ...){
   # Identify treatment difference name #
   ple_name <- colnames(mu_train)[grepl("diff", colnames(mu_train))]
   ple_name <- ple_name[1]
   
   ## Set up data ##
   mu_train$PLE <- mu_train[[ple_name]]
-  ind_PLE <- eval(parse(text=paste("ifelse(mu_train$PLE", thres, ", 1, 0)")))
-  w_PLE <- abs(mu_train$PLE)
+  ind_PLE <- eval(parse(text=paste("ifelse(mu_train$PLE", delta, ", 1, 0)")))
+  # Threshold as numeric #
+  delta.num <- substr(delta, 2, nchar(delta))
+  if (suppressWarnings(is.na(as.numeric(delta.num)))) {
+    delta.num <- substr(delta, 3, nchar(delta))
+  }
+  delta.num <- as.numeric(delta.num)
+  print(delta.num)
+  w_PLE <- abs(mu_train$PLE - delta.num)
   hold <- data.frame(ind_PLE, X)
   # Fit Model #
   mod <- suppressWarnings(partykit::ctree(ind_PLE ~ ., data = hold, weights = w_PLE,

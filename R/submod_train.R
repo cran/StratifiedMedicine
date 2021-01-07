@@ -115,7 +115,7 @@ submod_train = function(Y, A, X, Xtest=NULL, mu_train=NULL,
   }
   ## Fit submod ##
   fit = do.call(submod, append(list(Y=Y, A=A, X=X, Xtest=Xtest, mu_train=mu_train,
-                                  family=family), hyper))
+                                  family=family, delta=delta), hyper))
   ### Train/Test Predictions ###
   ## If prior predictions are made: ##
   if (!is.null(fit$Subgrps.train)){

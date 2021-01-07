@@ -19,7 +19,7 @@
 #' 
 #' @details ple_train uses base-learners along with a meta-learner to obtain patient-level 
 #' estimates under different treatment exposures (see Kunzel et al).  For family="gaussian" 
-#' or "binomial", output estimates of \eqn{mu(a,x)=E(Y|x,a)} and treatment differences 
+#' or "binomial", output estimates of \eqn{\mu(a,x)=E(Y|x,a)} and treatment differences 
 #' (average treatment effect or risk difference). For survival, either logHR based estimates
 #' or RMST based estimates can be obtained. Current base-learner ("ple") options include:
 #' 
@@ -76,7 +76,7 @@
 #' @export
 #' @references Wright, M. N. & Ziegler, A. (2017). ranger: A fast implementation of 
 #' random forests for high dimensional data in C++ and R. J Stat Softw 77:1-17. 
-#' \url{https://doi.org/10.18637/jss.v077.i01}.
+#' \doi{10.18637/jss.v077.i01}
 #' @references Friedman, J., Hastie, T. and Tibshirani, R. (2008) Regularization Paths for
 #'  Generalized Linear Models via Coordinate Descent,
 #'  \url{https://web.stanford.edu/~hastie/Papers/glmnet.pdf} Journal of Statistical 
@@ -89,15 +89,24 @@
 #'
 ## To DO: T-Learner, S-Learner, S-Learner (VT) ##
 ple_train = function(Y, A, X, Xtest=NULL, family="gaussian", propensity=FALSE,
-                      ple="ranger", meta="X-learner", hyper=NULL,
+                      ple="ranger", meta=ifelse(family=="survival", "T-learner", "X-learner"), hyper=NULL,
                       tau=NULL, ...) {
   
   if (is.null(Xtest)) {
     Xtest <- X
   }
   # Convert Names #
+  ple0 <- ple
   if (ple %in% c("ranger", "glmnet", "linear", "bart")) {
     ple <- paste("ple", ple, sep="_") 
+  }
+  # Check family #
+  if (is.Surv(Y) & family!="survival") {
+    family <- "survival"
+  }
+  # Check survival / X-learner #
+  if (family=="survival" & meta=="X-learner") {
+    meta = "T-learner"
   }
   
   if (is.null(A) | !(meta %in% c("T-learner", "S-learner", "X-learner"))) {
@@ -163,7 +172,7 @@ ple_train = function(Y, A, X, Xtest=NULL, family="gaussian", propensity=FALSE,
   if (is.null(fit$mu_test)) {
     mu_test <- fit$pred.fun(fit$mod, X=Xtest, tau=tau)
   }
-  res <- list(fit = fit, mu_train=mu_train, mu_test=mu_test)
+  res <- list(fit = fit, mu_train=mu_train, mu_test=mu_test, ple=ple0, meta=meta, family=family)
   class(res) <- "ple_train"
   return(res)
 }

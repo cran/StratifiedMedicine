@@ -23,12 +23,17 @@ globalVariables(c("Rules", "est", "LCL", "UCL", "PLE", "label", "N", "estimand",
 #' @param grid.thres Threshold for PLE, ex: I(PLE>thres). Used to estimate P(PLE>thres) for
 #' type="heatmap". Default is ">0". Direction can be reversed and can include equality
 #' sign (ex: "<=").
-#' @param tree.plots Type of plots to include in the "tree" plot. Default="outcome". For non-survival
-#' data, this includes boxplots of treatment-specific outcomes (param="lm"), 
-#' model-based estimates (param="ple"), or double-robust pseudo outcomes (param="lm"). For survival
-#' data, kaplan-meier plots are shown. For "density", the estimated probability density of the 
-#' treatment effects is shown 
-#' (normal approximation, unless resampling is used). "both" combines both plots.
+#' @param tree.plots Type of plots to include in each node of the "tree" plot. Default="outcome". 
+#' For non-survival data, if the fitted PRISM object (x) does not include patient-level 
+#' estimates (ple="None"), or if param="lm", this will plot the observed outcomes (Y) by the 
+#' treatment assignment (A). If the fitted PRISM object includes patient-level estimates 
+#' (ex: ple="ranger"), this includes box-plots of the model-based (if param="ple") or double-robust
+#' based (if param="dr") counter-factual estimates of E(Y|X,A=a) for continuous outcomes or 
+#' Prob(Y=1|X,A=a) for binary outcomes (truncated to 0,1). For survival data, Kaplan-Meier 
+#' based survival estimates are plotted by treatment group. For "density", the estimated 
+#' probability density of the treatment effects is shown (normal approximation, unless resampling is used). 
+#' "both" include the "outcome" and "density" plots. If tree.plots = "none", then only the 
+#' tree structure is shown.
 #' @param tree.thres Probability threshold, ex: P(Mean(A=1 vs A=0)>c. Default=NULL, 
 #' which defaults to using ">0", unless param="cox", which  "P(HR(A=1 vs A=0))<1". 
 #' If a density plot is included, setting tree.thres=">c" will use green colors 
@@ -63,13 +68,13 @@ plot.PRISM = function(x, type="tree", target=NULL, grid.data=NULL, grid.thres=">
                       width_dens=0.5, ...) {
   
   if (type=="PLE:waterfall") {
-    ple.fit <- list(ple = x$ple, mu_train = x$mu_train)
+    ple.fit <- list(ple = x$ple, mu_train = x$mu_train, family = x$family)
     ple.fit$mu_train$Subgrps <- factor(x$out.train$Subgrps)
     res <- plot_ple(object=ple.fit, type="waterfall")
     return(res)
   }
   if (type=="PLE:density") {
-    ple.fit <- list(ple = x$ple, mu_train = x$mu_train)
+    ple.fit <- list(ple = x$ple, mu_train = x$mu_train, family = x$family)
     ple.fit$mu_train$Subgrps <- factor(x$out.train$Subgrps)
     res <- plot_ple(object=ple.fit, type="density")
     return(res)

@@ -1,3 +1,7 @@
+# StratifiedMedicine 1.0.3
+* Fixed bugs for plot() (when family="survival"), such that Kaplan-meier plots match up with right tree nodes
+* Updated documentation and plot labels
+
 # StratifiedMedicine 1.0.2
 
 * Fixed bugs relating to binary outcome data (family="binomial")

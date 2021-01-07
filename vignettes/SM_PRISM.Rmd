@@ -64,17 +64,14 @@ The aim of PLE models is to estimate counterfactual quantities, for example the 
 ```{r ple_train, warning=FALSE, message=FALSE}
 res_p1 <- ple_train(Y, A, X, ple="ranger", meta="X-learner")
 summary(res_p1$mu_train)
-plot_ple(res_p1, target = "diff_1_0") + 
-  ggtitle("Waterfall Plot: E(Y|A=1)-E(Y|A=0)") + ylab("E(Y|A=1)-E(Y|A=0)")
-plot_dependence(res_p1, X=X, vars="X1") + ylab("E(Y|A=1)-E(Y|A=0)")
+plot_ple(res_p1)
+plot_dependence(res_p1, X=X, vars="X1")
 ```
 Next, let's illustrate how to change the meta-learner and the hyper-parameters. See below, along with a 2-dimension PDP plot.
 ```{r ple_train2, warning=FALSE, message=FALSE}
 res_p2 <- ple_train(Y, A, X, ple="ranger", meta="T-learner", hyper=list(mtry=5))
 summary(res_p2$mu_train)
-plot_dependence(res_p2, X=X, vars=c("X1", "X2")) + 
-  ggtitle("Heat Map (By X1,X2): E(Y|A=1)-E(Y|A=0)")
-  ylab("E(Y|A=1)-E(Y|A=0)")
+plot_dependence(res_p2, X=X, vars=c("X1", "X2"))
 ```
 
 # Subgroup Models
@@ -88,11 +85,11 @@ table(res_s1$Subgrps.train)
 plot(res_s1$fit$mod)
 ```
 
-Another generic approach is "otr", which follows an outcome weighted learning approach. Here, we regress PLE ~ ctree(X) with weights=abs(PLE) where PLE=E(Y|A=1,X)-E(Y|A=0,X) is the estimated individual treatment effect. For survival endpoints, the treatment difference would correspond to either logHR or RMST. For the example below, we set the clinically meaningful threshold to 0.1 (thres=">0.10"). 
+Another generic approach is "otr", which follows an outcome weighted learning approach. Here, we regress PLE ~ ctree(X) with weights=abs(PLE-delta) where PLE=E(Y|A=1,X)-E(Y|A=0,X) is the estimated individual treatment effect. For survival endpoints, the treatment difference would correspond to either logHR or RMST. For the example below, we set the clinically meaningful threshold to 0.1 (delta=">0.10"). 
 
 ```{r submod_train2, warning=FALSE, message=FALSE}
 res_s2 <- submod_train(Y, A, X,  mu_train=res_p2$mu_train, 
-                       submod="otr", hyper=list(thres=">0.10"))
+                       submod="otr", delta=">0.10")
 plot(res_s2$fit$mod)
 ```
 

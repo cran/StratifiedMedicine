@@ -32,16 +32,13 @@ plot_importance(res_f2)
 ## ----ple_train, warning=FALSE, message=FALSE----------------------------------
 res_p1 <- ple_train(Y, A, X, ple="ranger", meta="X-learner")
 summary(res_p1$mu_train)
-plot_ple(res_p1, target = "diff_1_0") + 
-  ggtitle("Waterfall Plot: E(Y|A=1)-E(Y|A=0)") + ylab("E(Y|A=1)-E(Y|A=0)")
-plot_dependence(res_p1, X=X, vars="X1") + ylab("E(Y|A=1)-E(Y|A=0)")
+plot_ple(res_p1)
+plot_dependence(res_p1, X=X, vars="X1")
 
 ## ----ple_train2, warning=FALSE, message=FALSE---------------------------------
 res_p2 <- ple_train(Y, A, X, ple="ranger", meta="T-learner", hyper=list(mtry=5))
 summary(res_p2$mu_train)
-plot_dependence(res_p2, X=X, vars=c("X1", "X2")) + 
-  ggtitle("Heat Map (By X1,X2): E(Y|A=1)-E(Y|A=0)")
-  ylab("E(Y|A=1)-E(Y|A=0)")
+plot_dependence(res_p2, X=X, vars=c("X1", "X2"))
 
 ## ----submod_train1, warning=FALSE, message=FALSE------------------------------
 res_s1 <- submod_train(Y, A, X, submod="lmtree")
@@ -50,7 +47,7 @@ plot(res_s1$fit$mod)
 
 ## ----submod_train2, warning=FALSE, message=FALSE------------------------------
 res_s2 <- submod_train(Y, A, X,  mu_train=res_p2$mu_train, 
-                       submod="otr", hyper=list(thres=">0.10"))
+                       submod="otr", delta=">0.10")
 plot(res_s2$fit$mod)
 
 ## ----param1, warning=FALSE, message=FALSE-------------------------------------

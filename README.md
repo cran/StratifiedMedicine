@@ -33,7 +33,7 @@ mentioned above:
 
 2.  **Patient-level estimate (ple\_train)**: Estimate counterfactual
     patient-level quantities, for example the individual treatment
-    effect, \(\theta(x) = E(Y|X=x,A=1)-E(Y|X=x,A=0)\).
+    effect, θ(x) = E(Y|X=x, A=1)-E(Y|X=x,A=0)
 
 3.  **Subgroup model (submod\_train)**: Tree-based models to identify
     groups with hetergenous treatment effects (ex: responder vs
@@ -66,17 +66,18 @@ devtools::install_github("thomasjemielita/StratifiedMedicine")
 ## Example: Continuous Outcome with Binary Treatment
 
 Suppose the estimand or question of interest is the average treatment
-effect, \(\theta_0 = E(Y|A=1)-E(Y|A=0)\). The goal is to understand
+effect, θ<sub>0</sub> = E(Y|A=1)-E(Y|A=0). The goal is to understand
 whether there is any treatment heterogeneity across patients and if
 there are any distinct subgroups with similar responses. In this
 example, we simulate continuous data where roughly 30% of the patients
 receive no treatment-benefit for using \(A=1\) vs \(A=0\). Responders vs
 non-responders are defined by the continuous predictive covariates
-\(X_1\) and \(X_2\) for a total of four subgroups. Subgroup treatment
-effects are: \(\theta_{1} = 0\) (\(X_1 \leq 0, X_2 \leq 0\)),
-\(\theta_{2} = 0.25 (X_1 > 0, X_2 \leq 0)\),
-\(\theta_{3} = 0.45 (X_1 \leq 0, X2 > 0\)),
-\(\theta_{4} = 0.65 (X_1>0, X_2>0)\).
+\(X1\) and \(X2\) for a total of four subgroups. Subgroup treatment
+effects are:
+
+θ<sub>1</sub> = 0 (X1 ≤ 0, X2 ≤ 0), θ<sub>2</sub> = 0.25 (X1 \> 0, X2 ≤
+0), θ<sub>3</sub> = 0.45 (X1 ≤ 0, X2 \> 0), θ<sub>4</sub> = 0.65 (X1 \>
+0, X2 \>0)
 
 ``` r
 library(StratifiedMedicine)

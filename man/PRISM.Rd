@@ -14,7 +14,7 @@ PRISM(
   ple = "ranger",
   submod = NULL,
   param = NULL,
-  meta = "X-learner",
+  meta = ifelse(family == "survival", "T-learner", "X-learner"),
   pool = "no",
   delta = ">0",
   propensity = FALSE,
@@ -81,7 +81,8 @@ for binary treatments or A=NULL.}
 estimating patient-level treatment differences. Options include "T-learner" (treatment
 specific models), "S-learner" (single model), and "X-learner". For family="gaussian" &
 "binomial", the default is "X-learner", which uses a two-stage regression 
-approach (See Kunzel et al 2019). For "survival", the default is "T-learner".}
+approach (See Kunzel et al 2019). For "survival", the default is "T-learner". "X-learner" 
+is currently not supported for survival outcomes.}
 
 \item{pool}{Whether to pool discovered subgroups. Default is "no" (no pooling).
 Other options include "otr:logistic", which uses an optimal treatment regime approach, 
@@ -90,7 +91,7 @@ the candidate subgroups as covariates, and weights=abs(PLE). Lastly, the youden 
 used to assign optimal treatments across the discovered subgroups.}
 
 \item{delta}{Threshold for defining benefit vs non-benefitting patients. Only applicable 
-for pool="otr:logistic" or "otr:rf"; Default=">0".}
+for submod="otr", and pool="otr:logistic" or "otr:rf"; Default=">0".}
 
 \item{propensity}{Propensity score estimation, P(A=a|X). Default=FALSE which use the 
 marginal estimates, P(A=a) (applicable for RCT data). If TRUE, will use "ple" base learner.}
@@ -322,7 +323,7 @@ A Conditional Inference Framework. Journal of Computational and Graphical Statis
 
 Wright, M. N. & Ziegler, A. (2017). ranger: A fast implementation of 
 random forests for high dimensional data in C++ and R. J Stat Softw 77:1-17. 
-\url{https://doi.org/10.18637/jss.v077.i01}.
+\doi{10.18637/jss.v077.i01}.
 
 Zeileis A, Hothorn T, Hornik K (2008). Model-Based Recursive Partitioning. 
 Journal of Computational and Graphical Statistics, 17(2), 492–514.
