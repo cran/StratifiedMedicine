@@ -26,18 +26,18 @@ factor). "ple_train" accomodates >2 along with binary treatments.}
 
 \item{X}{Covariate space.}
 
-\item{Xtest}{Test set. Default is NULL which uses X (training set). Variable types should
-match X.}
+\item{Xtest}{Test set. Default is NULL (no test predictions). Variable types should match X.}
 
 \item{family}{Outcome type. Options include "gaussion" (default), "binomial", and "survival".}
 
-\item{propensity}{Propensity score estimation, P(A=a|X). Default=FALSE which use the 
-marginal estimates, P(A=a) (applicable for RCT data). If TRUE, will use "ple" base learner.}
+\item{propensity}{Propensity score estimation, P(A=a|X). Default=FALSE which 
+use the marginal estimates, P(A=a) (applicable for RCT data). If TRUE, will 
+use the "ple" base learner to estimate P(A=a|X).}
 
 \item{ple}{Base-learner used to estimate patient-level equantities, such as the 
-individual treatment effect. Default is random based based through 
-"ranger". "None" uses no ple. See below for details on estimating the treatment
-contrasts.}
+conditional average treatment effect (CATE), E(Y|A=1,X)-E(Y|A=0, X) = CATE(X). 
+Default is random based based through "ranger". "None" uses no ple. See below for 
+details on estimating the treatment contrasts.}
 
 \item{meta}{Using the ple model as a base learner, meta-learners can be used for 
 estimating patient-level treatment differences. Options include "T-learner" (treatment

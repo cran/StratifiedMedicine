@@ -68,13 +68,17 @@ plot.PRISM = function(x, type="tree", target=NULL, grid.data=NULL, grid.thres=">
                       width_dens=0.5, ...) {
   
   if (type=="PLE:waterfall") {
-    ple.fit <- list(ple = x$ple, mu_train = x$mu_train, family = x$family)
+    ple.fit <- list(ple = x$ple, mu_train = x$mu_train, 
+                    family = x$family, 
+                    treetype = x$ple.fit$mod$fit0[[1]]$mod$mod$treetype)
     ple.fit$mu_train$Subgrps <- factor(x$out.train$Subgrps)
     res <- plot_ple(object=ple.fit, type="waterfall")
     return(res)
   }
   if (type=="PLE:density") {
-    ple.fit <- list(ple = x$ple, mu_train = x$mu_train, family = x$family)
+    ple.fit <- list(ple = x$ple, mu_train = x$mu_train, 
+                    family = x$family,
+                    treetype = x$ple.fit$mod$fit0[[1]]$mod$mod$treetype)
     ple.fit$mu_train$Subgrps <- factor(x$out.train$Subgrps)
     res <- plot_ple(object=ple.fit, type="density")
     return(res)
@@ -110,12 +114,6 @@ plot.PRISM = function(x, type="tree", target=NULL, grid.data=NULL, grid.thres=">
       label.param <- "(CV)"
     }
   }
-  if (bayes) {
-    param.dat$est0 <- param.dat$est.bayes
-    param.dat$SE0 <- param.dat$SE.bayes
-    param.dat$LCL0 <- param.dat$LCL.bayes
-    param.dat$UCL0 <- param.dat$UCL.bayes
-  }
   if (x$family=="survival") {
     if (x$param=="cox") {
       param.dat$est0 = exp(param.dat$est0)
@@ -134,7 +132,6 @@ plot.PRISM = function(x, type="tree", target=NULL, grid.data=NULL, grid.thres=">
     if (!is.null(tree.thres)) {
       thres.name <- paste("Prob(",tree.thres, ")", sep="")
       x2 <- prob_calculator(x, thres=tree.thres)
-      colnames(x2$param.dat)[which(colnames(x2$param.dat)==thres.name)] <- "prob.est"
     }
     if (is.null(tree.thres)) {
       x2 <- x
@@ -142,6 +139,7 @@ plot.PRISM = function(x, type="tree", target=NULL, grid.data=NULL, grid.thres=">
     }
     cls <- class(x2$submod.fit$mod)
     if ("party" %in% cls) {
+      # print(x2$param.dat)
       res <- do.call("plot_ggparty", list(object=x2, plots=tree.plots,
                                        prob.thres = tree.thres,
                                        nudge_out=nudge_out, width_out=width_out,

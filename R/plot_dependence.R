@@ -158,7 +158,7 @@ plot_dependence <- function(object, X=NULL, target=NULL, vars,
   X.grid = do.call(rbind, X.grid)
   counter.vec = X.grid$counter
   X.grid = X.grid[,!(colnames(X.grid) %in% "counter")]
-  
+
   # Univariate (Marginal Effect) #
   if (numb_vars==1) {
     if (class(object)=="PRISM") {

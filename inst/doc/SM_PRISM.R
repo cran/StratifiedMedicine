@@ -30,14 +30,13 @@ res_f2$filter.vars
 plot_importance(res_f2)
 
 ## ----ple_train, warning=FALSE, message=FALSE----------------------------------
-res_p1 <- ple_train(Y, A, X, ple="ranger", meta="X-learner")
+res_p1 <- ple_train(Y, A, X, ple="ranger", meta="T-learner")
 summary(res_p1$mu_train)
 plot_ple(res_p1)
 plot_dependence(res_p1, X=X, vars="X1")
 
 ## ----ple_train2, warning=FALSE, message=FALSE---------------------------------
 res_p2 <- ple_train(Y, A, X, ple="ranger", meta="T-learner", hyper=list(mtry=5))
-summary(res_p2$mu_train)
 plot_dependence(res_p2, X=X, vars=c("X1", "X2"))
 
 ## ----submod_train1, warning=FALSE, message=FALSE------------------------------
@@ -52,7 +51,7 @@ plot(res_s2$fit$mod)
 
 ## ----param1, warning=FALSE, message=FALSE-------------------------------------
 param.dat1 <- param_est(Y, A, X, Subgrps = res_s1$Subgrps.train, param="lm")
-param.dat1 %>% filter(estimand=="mu_1-mu_0")
+param.dat1
 
 ## ----param2, warning=FALSE, message=FALSE-------------------------------------
 param.dat2 <- param_est(Y, A, X, Subgrps = res_s1$Subgrps.train, 
@@ -75,7 +74,7 @@ summ.table = data.frame( `Step` = c("estimand(s)", "filter", "ple", "submod", "p
                         `survival` = c("HR(A=1 vs A=0)",
                                        "Elastic Net<br>(glmnet)", 
                                        "T-learner: Random Forest<br>(ranger)",
-                                       "MOB(weibull)<br>(mob_weib)", 
+                                       "MOB(OLS)<br>(lmtree)", 
                                        "Hazard Ratios<br>(cox)") )                        
                       
 kable( summ.table, caption = "Default PRISM Configurations (With Treatment)", full_width=T)
@@ -132,13 +131,13 @@ table(res0$out.test$Subgrps)
 ## Overall/subgroup specific parameter estimates/inference
 res0$param.dat
 
-## ----default_hyper------------------------------------------------------------
-# PRISM Default: glmnet, ranger, lmtree, dr #
-# Change hyper-parameters #
-res_new_hyper = PRISM(Y=Y, A=A, X=X, filter.hyper = list(lambda="lambda.1se"),
-                      ple.hyper = list(min.node.pct=0.05), 
-                      submod.hyper = list(minsize=200), verbose=FALSE)
-summary(res_new_hyper)
+## ----default_hyper, eval=FALSE------------------------------------------------
+#  # PRISM Default: glmnet, ranger, lmtree, dr #
+#  # Change hyper-parameters #
+#  res_new_hyper = PRISM(Y=Y, A=A, X=X, filter.hyper = list(lambda="lambda.1se"),
+#                        ple.hyper = list(min.node.pct=0.05),
+#                        submod.hyper = list(minsize=200), verbose=FALSE)
+#  summary(res_new_hyper)
 
 ## ----default_binary-----------------------------------------------------------
 dat_bin = generate_subgrp_data(family="binomial", seed = 5558)
@@ -148,7 +147,6 @@ A = dat_bin$A # binary treatment, 1:1 randomized
 
 res0 = PRISM(Y=Y, A=A, X=X)
 summary(res0)
-plot(res0)
 
 ## ----default_surv-------------------------------------------------------------
 # Load TH.data (no treatment; generate treatment randomly to simulate null effect) ##
@@ -162,12 +160,12 @@ A = rbinom(n = dim(X)[1], size=1, prob=0.5)
 
 # Default: glmnet ==> ranger (estimates patient-level RMST(1 vs 0) ==> mob_weib (MOB with Weibull) ==> cox (Cox regression)
 res_weib = PRISM(Y=Y, A=A, X=X)
-plot(res_weib, type="PLE:waterfall")
+summary(res_weib)
 plot(res_weib)
 
-## ----default_boot, warning=FALSE, message=FALSE-------------------------------
-res_boot = PRISM(Y=Y, A=A, X=X, resample = "Bootstrap", R=50, ple="None")
-summary(res_boot)
-# Plot of distributions #
-plot(res_boot, type="resample", estimand = "HR(A=1 vs A=0)")+geom_vline(xintercept = 1)
+## ----default_boot, warning=FALSE, message=FALSE, eval=FALSE-------------------
+#  res_boot = PRISM(Y=Y, A=A, X=X, resample = "Bootstrap", R=50, ple="None")
+#  summary(res_boot)
+#  # Plot of distributions #
+#  plot(res_boot, type="resample", estimand = "HR(A=1 vs A=0)")+geom_vline(xintercept = 1)
 

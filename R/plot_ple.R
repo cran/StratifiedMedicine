@@ -59,7 +59,14 @@ plot_ple <- function(object, target=NULL, type="waterfall", ...) {
     }
     if (family=="survival") {
       if (object$ple=="ranger") {
-        ple.label <- paste("RMST(X,A=", pieces[2], ")-", "RMST(X,A=", pieces[3], ")", sep="")
+        treetype <- object$treetype
+        # if (is.null(object$treetype) & class(object)=="ple_train") {
+        #   treetype <- object$fit$mod$fit0[[1]]$mod$mod$treetype
+        # }
+        # if (treetype=="Regression") {
+        #   ple.label <- paste("logT(X,A=", pieces[2], ")-", "logT(X,A=", pieces[3], ")", sep="")
+        # }
+        ple.label <- paste("RMST(X,A=", pieces[2], ")-", "RMST(X,A=", pieces[3], ")", sep="") 
       }
       if (object$ple %in% c("linear", "glmnet")) {
         ple.label <- paste("logHR(X,A=", pieces[2], ")-", "logHR(X,A=", pieces[3], ")", sep="")
