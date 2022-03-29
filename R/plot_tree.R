@@ -1,7 +1,66 @@
-## ggparty: Incorporate parameter estimates/CIs/etc directly onto tree plot ##
-## TO DO: Add binomial plots 
-plot_ggparty = function(object, plots, prob.thres, width_out, nudge_out,
-                     width_dens, nudge_dens) {
+#' Tree Plot: Tree Structure, Subgroup-specific treatment estimates
+#'
+#' For partykit or rpart based tree models, visualize tree structure and subgroup (node)
+#' specific treatment estimates. Plots (ggparty) can include other node-specific information, 
+#' see below for details. 
+#'
+#' @param object PRISM or submod_train object
+#' @param plots Type of plots to include in each node of the "tree" plot. Default="outcome". 
+#' For non-survival data, if the fitted PRISM object (x) does not include patient-level 
+#' estimates (ple="None"), or if param="lm", this will plot the observed outcomes (Y) by the 
+#' treatment assignment (A). If the fitted PRISM object includes patient-level estimates 
+#' (ex: ple="ranger"), this includes box-plots of the model-based (if param="ple") or double-robust
+#' based (if param="dr") counter-factual estimates of E(Y|X,A=a) for continuous outcomes or 
+#' Prob(Y=1|X,A=a) for binary outcomes (truncated to 0,1). For survival data, Kaplan-Meier 
+#' based survival estimates are plotted by treatment group. For "density", the estimated 
+#' probability density of the treatment effects is shown (normal approximation, unless resampling is used). 
+#' "both" include the "outcome" and "density" plots. If tree.plots = "none", then only the 
+#' tree structure is shown.
+#' @param prob.thres Probability threshold, ex: P(Mean(A=1 vs A=0)>c. Default=NULL, 
+#' which defaults to using ">0", unless param="cox", which  "P(HR(A=1 vs A=0))<1". 
+#' If a density plot is included, setting prob.thres=">c" will use green colors 
+#' for values above c, and red colors for values below c. If tree.thres="<c", the 
+#' reverse color scheme is used.
+#' @param nudge_out Nudge tree outcome plot (see ggparty for details)
+#' @param nudge_dens Nudge tree density plot
+#' @param width_out Width of tree outcome plot (see ggparty for details)
+#' @param width_dens Width of density tree outcome plot
+#' @param ... Additional arguments (currently ignored).
+#' @return Plot (ggplot2) object
+#' @export
+#'
+#'
+#'
+plot_tree = function(object, prob.thres = ">0", plots="outcome",
+                        nudge_out=0.1, width_out=0.5,
+                        nudge_dens=ifelse(plots=="both", 0.3, 0.1),
+                        width_dens=0.5, ...) {
+  
+  # Set up treatment estimate data #
+  if (inherits(object, "PRISM")) {
+    
+    if (is.null(object$param.dat$est0)) {
+      object <- default_trt_plots(obj=object)
+    }
+  }
+  if (inherits(object, "submod_train")) {
+    
+    object$param.dat <- object$trt_eff
+    object$family <- object$list_args$family
+    object$alpha_s <- object$list_args$alpha_s
+    object$alpha_ovrl <- object$list_args$alpha_ovrl
+    object$submod.fit <- object$fit
+    object$ple <- object$list_args$ple
+    object$param <- object$list_args$param
+    
+    object$param.dat$est0 <- object$param.dat$est
+    object$param.dat$SE0 <- object$param.dat$SE
+    object$param.dat$LCL0 <- object$param.dat$LCL
+    object$param.dat$UCL0 <- object$param.dat$UCL
+    object <- prob_calculator(object, thres=prob.thres)
+    
+  }
+  
   # Extract #
   n <- dim(object$out.train)[1]
   family <- object$family
@@ -12,18 +71,24 @@ plot_ggparty = function(object, plots, prob.thres, width_out, nudge_out,
   alpha_s <- object$alpha_s
   resample <- ifelse(is.null(object$resample), "None", object$resample)
   ct <- object$submod.fit$mod
-  # Parameter Estimates #
-  param.dat <- object$param.dat
-  # param.dat$est0 <- param.dat$est
-  # param.dat$SE0 <- param.dat$SE
-  # param.dat$LCL0 <- param.dat$LCL
-  # param.dat$UCL0 <- param.dat$UCL
-  # param.dat$prob.est <- param.dat$`Prob(>0)`
   if (is.null(object$trt_assign)) {
     Subgrps_num <- as.numeric(unique(object$out.train$Subgrps))
   }
   if (!is.null(object$trt_assign)) {
     Subgrps_num <- as.numeric(unique(object$trt_assign$Subgrps))
+  }
+  
+  param.dat <- object$param.dat
+  
+  # Convert logHR to HR (if cox) #
+  if (family=="survival") {
+    if (object$param=="cox") {
+      param.dat$est0 = exp(param.dat$est0)
+      param.dat$LCL0 = exp(param.dat$LCL0)
+      param.dat$UCL0 = exp(param.dat$UCL0)
+      param.dat$estimand = gsub("logHR", "HR", param.dat$estimand)
+      param.dat$prob.est = 1-param.dat$`Prob(>0)`
+    }
   }
   
   param.dat$label <- with(param.dat, paste( sprintf("%.2f", round(est0,2)),
@@ -128,7 +193,7 @@ plot_ggparty = function(object, plots, prob.thres, width_out, nudge_out,
   }
   
   ## Create density data ##
-  post.prob <- object$resamp.dist
+  post.prob <- object$resamp_dist
   gen_post <- FALSE
   if (is.null(object$resample)) {
     gen_post <- TRUE
@@ -170,18 +235,18 @@ plot_ggparty = function(object, plots, prob.thres, width_out, nudge_out,
     pool.dat <- unique(object$trt_assign)
     colnames(pool.dat) <- c("Subgrps0", "Subgrps")
     # Merge with param #
-    param.dat <- left_join(param.dat, pool.dat, by="Subgrps")
+    param.dat <- dplyr::left_join(param.dat, pool.dat, by="Subgrps")
     param.dat$Subgrps <- with(param.dat, ifelse(Subgrps=="ovrl", "ovrl",
                                                 as.character(Subgrps0)))
     # Merge with plot datas #
     colnames(pool.dat) <- c("Subgrps0", "id")
-    plot.dat <- left_join(plot.dat, pool.dat, by="id")
+    plot.dat <- dplyr::left_join(plot.dat, pool.dat, by="id")
     plot.dat$trt_assign <- plot.dat$id
     plot.dat$id <- plot.dat$Subgrps0 
-    dat.dens <- left_join(dat.dens, pool.dat, by="id")
+    dat.dens <- dplyr::left_join(dat.dens, pool.dat, by="id")
     dat.dens$trt_assign <- dat.dens$id
     dat.dens$id <- dat.dens$Subgrps0
-    param.subs <- left_join(param.subs, pool.dat, by="id")
+    param.subs <- dplyr::left_join(param.subs, pool.dat, by="id")
     param.subs$trt_assign <- param.subs$id
     param.subs$Subgrps <- param.subs$Subgrps0
   }
@@ -193,8 +258,8 @@ plot_ggparty = function(object, plots, prob.thres, width_out, nudge_out,
   if (family=="gaussian") {
     if (!is.null(object$out.train$A)) {
       plot.dat$estimand <- with(plot.dat, 
-                               paste("E(Y|X,A=", 
-                                     sub(".*_", "", estimand), ")", sep=""))
+                                paste("E(Y|X,A=", 
+                                      sub(".*_", "", estimand), ")", sep=""))
       param.subs$estimand <- paste("E(Y|A=", A_lvls[2], ")-", 
                                    "E(Y|A=", A_lvls[1], ")", sep="")
       dat.dens$estimand <- paste("E(Y|A=", A_lvls[2], ")-", 
@@ -249,9 +314,9 @@ plot_ggparty = function(object, plots, prob.thres, width_out, nudge_out,
     ggparty::geom_edge() +
     ggparty::geom_edge_label() +
     ggparty::geom_node_label(line_list = list(ggplot2::aes(label = splitvar),
-                                     ggplot2::aes(label = pval_convert(p.value))),
-                    line_gpar = list(list(size = 8, col = "black", fontface = "bold"),
-                                     list(size = 8)),ids = "inner")
+                                              ggplot2::aes(label = pval_convert(p.value))),
+                             line_gpar = list(list(size = 8, col = "black", fontface = "bold"),
+                                              list(size = 8)),ids = "inner")
   # Set up prob cutoff params #
   dir <- substr(prob.thres, 1, 1)
   thres <- substr(prob.thres, 2, nchar(prob.thres))
@@ -266,19 +331,19 @@ plot_ggparty = function(object, plots, prob.thres, width_out, nudge_out,
     # Add Node Info #
     plt <- plt + 
       ggparty::geom_node_label(
-      line_list = list(
-        ggplot2::aes(label = paste("Node ", id) ),
-        ggplot2::aes(label = paste("N = ", N, " (", round(N/n*100,1), "%)", sep="")),
-        ggplot2::aes(label = paste(estimand, " [", (1-alpha_s)*100,"% CI]", sep="")),
-        ggplot2::aes(label = label),
-        ggplot2::aes(label = paste(prob.label, "=", prob.est))
-      ),
-      line_gpar = list(list(size = 8, fontface="bold"),
-                       list(size = 8),
-                       list(size = 8, fontface="bold"),
-                       list(size = 8),
-                       list(size = 8)),
-      ids = "terminal", nudge_x = ifelse(plots=="none", 0.05, 0))
+        line_list = list(
+          ggplot2::aes(label = paste("Node ", id) ),
+          ggplot2::aes(label = paste("N = ", N, " (", round(N/n*100,1), "%)", sep="")),
+          ggplot2::aes(label = paste(estimand, " [", (1-alpha_s)*100,"% CI]", sep="")),
+          ggplot2::aes(label = label),
+          ggplot2::aes(label = paste(prob.label, "=", prob.est))
+        ),
+        line_gpar = list(list(size = 8, fontface="bold"),
+                         list(size = 8),
+                         list(size = 8, fontface="bold"),
+                         list(size = 8),
+                         list(size = 8)),
+        ids = "terminal", nudge_x = ifelse(plots=="none", 0.05, 0))
     # Outcome Plot #
     out_plot <- ggparty::geom_node_plot(
       gglist = list(ggplot2::geom_boxplot(data=plot.dat,
@@ -296,17 +361,17 @@ plot_ggparty = function(object, plots, prob.thres, width_out, nudge_out,
     # Density Plot #
     dens_plot <- ggparty::geom_node_plot(
       gglist = list( ggplot2::geom_area(data=dat.dens, 
-                     ggplot2::aes(x = ifelse(x < thres , x, thres),y=y), fill = fill_L),
+                                        ggplot2::aes(x = ifelse(x < thres , x, thres),y=y), fill = fill_L),
                      ggplot2::geom_area(data=dat.dens, 
                                         ggplot2::aes(x = ifelse(x > thres , x, thres),
-                                                  y=y), fill = fill_R),
-                     ggplot2::geom_line(data=dat.dens, aes(x=x,y=y)),
+                                                     y=y), fill = fill_R),
+                     ggplot2::geom_line(data=dat.dens, ggplot2::aes(x=x,y=y)),
                      ggplot2::ylim(0,max.dens),
                      ggplot2::theme_bw(),
                      ggplot2::ggtitle(estimand),
                      ggplot2::theme(plot.title = 
                                       ggplot2::element_text(size = 8, face = "bold")),
-                     ggplot2::xlab("Density"), ylab("") ), shared_axis_labels = TRUE,
+                     ggplot2::xlab("Density"), ggplot2::ylab("") ), shared_axis_labels = TRUE,
       width=width_dens, nudge_x = nudge_dens)
     # Different Plot Types #
     if (plots=="none") {
@@ -331,7 +396,7 @@ plot_ggparty = function(object, plots, prob.thres, width_out, nudge_out,
           ggplot2::aes(label = paste("Node ", id) ),
           ggplot2::aes(label = paste("N = ", N, " (", round(N/n*100,1), "%)", sep="")),
           ggplot2::aes(label = paste("Events = ", events,
-                            " (", round(events/n.events*100,1), "%)", sep="")),
+                                     " (", round(events/n.events*100,1), "%)", sep="")),
           ggplot2::aes(label = paste(estimand, " [", (1-alpha_s)*100,"% CI]", sep="")),
           ggplot2::aes(label = label),
           ggplot2::aes(label = paste(prob.label, "=", prob.est))
@@ -345,27 +410,27 @@ plot_ggparty = function(object, plots, prob.thres, width_out, nudge_out,
         ids = "terminal",
         nudge_x = ifelse(plots=="none", 0.05, 0))
     if (is.null(out.train$A)) {
-      gg_line <- ggplot2::geom_line(data=plot.dat,aes(x=time, y=surv), size=1.5)
+      gg_line <- ggplot2::geom_line(data=plot.dat,ggplot2::aes(x=time, y=surv), size=1.5)
     }
     if (!is.null(out.train$A)) {
-      gg_line <- ggplot2::geom_line(data=plot.dat,aes(x=time, y=surv, col=A), size=1.5)
+      gg_line <- ggplot2::geom_line(data=plot.dat,ggplot2::aes(x=time, y=surv, col=A), size=1.5)
       plot.dat$A <- factor(plot.dat$A, levels = A_lvls)
     }
     out_plot <- ggparty::geom_node_plot(gglist = list(gg_line,
-                                             ggplot2::xlab("Time"),
-                                             ggplot2::ylab( "Survival Probability" ),
-                                             ggplot2::theme_bw(),
-                                             ggplot2::theme(legend.title = element_blank())),
-                               shared_axis_labels = TRUE,
-                               legend_separator = TRUE, scales = "fixed", 
-                               width=width_out, nudge_x=nudge_out)
+                                                      ggplot2::xlab("Time"),
+                                                      ggplot2::ylab( "Survival Probability" ),
+                                                      ggplot2::theme_bw(),
+                                                      ggplot2::theme(legend.title = element_blank())),
+                                        shared_axis_labels = TRUE,
+                                        legend_separator = TRUE, scales = "fixed", 
+                                        width=width_out, nudge_x=nudge_out)
     # Density #
     dens_plot <- ggparty::geom_node_plot(
       gglist = list( ggplot2::geom_area(data=dat.dens, 
-                     ggplot2::aes(x = ifelse(x < thres , x, thres),y=y), fill = fill_L),
-                     ggplot2::geom_area(data=dat.dens, aes(x = ifelse(x > thres , x, thres),
-                                                  y=y), fill = fill_R),
-                     ggplot2::geom_line(data=dat.dens, aes(x=x,y=y)),
+                                        ggplot2::aes(x = ifelse(x < thres , x, thres),y=y), fill = fill_L),
+                     ggplot2::geom_area(data=dat.dens, ggplot2::aes(x = ifelse(x > thres , x, thres),
+                                                                    y=y), fill = fill_R),
+                     ggplot2::geom_line(data=dat.dens, ggplot2::aes(x=x,y=y)),
                      ggplot2::ylim(0,max.dens), 
                      ggplot2::theme_bw(), ggplot2::xlab("Density"), 
                      ggplot2::ylab(""),

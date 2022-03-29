@@ -41,22 +41,16 @@ plot_dependence(res_p2, X=X, vars=c("X1", "X2"))
 
 ## ----submod_train1, warning=FALSE, message=FALSE------------------------------
 res_s1 <- submod_train(Y, A, X, submod="lmtree")
-table(res_s1$Subgrps.train)
-plot(res_s1$fit$mod)
+summary(res_s1)
+plot_tree(res_s1)
 
 ## ----submod_train2, warning=FALSE, message=FALSE------------------------------
-res_s2 <- submod_train(Y, A, X,  mu_train=res_p2$mu_train, 
-                       submod="otr", delta=">0.10")
-plot(res_s2$fit$mod)
+res_s2 <- submod_train(Y, A, X,  mu_train=res_p2$mu_train, submod="rpart_cate")
+summary(res_s2)
 
 ## ----param1, warning=FALSE, message=FALSE-------------------------------------
 param.dat1 <- param_est(Y, A, X, Subgrps = res_s1$Subgrps.train, param="lm")
 param.dat1
-
-## ----param2, warning=FALSE, message=FALSE-------------------------------------
-param.dat2 <- param_est(Y, A, X, Subgrps = res_s1$Subgrps.train, 
-                        mu_hat = res_p1$mu_train, param="dr")
-param.dat2 %>% filter(estimand=="mu_1-mu_0")
 
 ## ----table_steps, echo=FALSE--------------------------------------------------
 library(knitr)
@@ -110,9 +104,9 @@ res_prog = PRISM(Y=Y, X=X)
 summary(res_prog)
 
 ## ----default_ctns_filter, include=FALSE---------------------------------------
-# elastic net model: loss by lambda #
+# Elastic net model: loss by lambda #
 plot(res0$filter.mod)
-## Variables that remain after filtering ##
+# Variables that remain after filtering #
 res0$filter.vars
 # All predictive variables (X1,X2) and prognostic variables (X3,X5, X7) remains.
 plot_importance(res0)
@@ -132,11 +126,9 @@ table(res0$out.test$Subgrps)
 res0$param.dat
 
 ## ----default_hyper, eval=FALSE------------------------------------------------
-#  # PRISM Default: glmnet, ranger, lmtree, dr #
-#  # Change hyper-parameters #
 #  res_new_hyper = PRISM(Y=Y, A=A, X=X, filter.hyper = list(lambda="lambda.1se"),
 #                        ple.hyper = list(min.node.pct=0.05),
-#                        submod.hyper = list(minsize=200), verbose=FALSE)
+#                        submod.hyper = list(minsize=200, maxdepth=3), verbose=FALSE)
 #  summary(res_new_hyper)
 
 ## ----default_binary-----------------------------------------------------------

@@ -82,7 +82,7 @@ ple_ranger_mtry = function(Y, X, mtry=5, ...){
     mod = list(mod=mod)
     pred.fun <- function(mod, X, ...){
       mu_hat <- predict(mod$mod, X)$predictions
-      mu_hat <- data.frame(mu_hat)
+      mu_hat <- mu_hat
       return(mu_hat)
     }
     res = list(mod=mod, pred.fun=pred.fun)
@@ -152,21 +152,20 @@ param_rlm = function(Y, A, alpha, ...){
 
 
 ## ----user_SM_final, warnings=FALSE, message=FALSE-----------------------------
+# Individual Steps #
 step1 <- filter_train(Y, A, X, filter="filter_lasso")
 X.star <- X[,colnames(X) %in% step1$filter.vars]
-step2 <- ple_train(Y, A, X.star, ple = "ple_ranger_mtry")
+step2 <- ple_train(Y, A, X.star, ple = "ple_ranger_mtry", meta="X-learner")
 plot_ple(step2)
-step3 <- submod_train(Y, A, X.star, submod = "submod_lmtree_pred")
-plot(step3$fit$mod)
-step4 <- param_est(Y, A, X.star, Subgrps=step3$Subgrps.train, param="param_rlm")
-step4
-# PRISM #
+step3 <- submod_train(Y, A, X.star, submod = "submod_lmtree_pred", param="param_rlm")
+plot_tree(step3)
+
+# Combine all through PRISM #
 res_user1 = PRISM(Y=Y, A=A, X=X, family="gaussian", filter="filter_lasso", 
-             ple = "ple_ranger_mtry", submod = "submod_lmtree_pred",
+             ple = "ple_ranger_mtry", meta="X-learner", 
+             submod = "submod_lmtree_pred",
              param="param_rlm")
-plot_ple(res_user1)
-# variables that remain after filtering #
 res_user1$filter.vars
-# Parameter estimates/inference
-res_user1$param.dat
+plot(res_user1, type="PLE:waterfall")
+plot(res_user1)
 
