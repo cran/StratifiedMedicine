@@ -352,7 +352,7 @@ PRISM <- function(Y, A=NULL, X, Xtest=NULL, mu_train=NULL, family="gaussian",
     }
   }
   
-  list_args <- list(family = family, filter = filter, 
+  list_args <- list(family = family, filter = filter, mu_train=mu_train,
                     ple = ple, submod = submod, param = param,
                     meta = meta, pool = pool,
                     delta = delta, propensity = propensity,

@@ -1,7 +1,10 @@
 globalVariables(c("Rules", "est", "LCL", "UCL", "PLE", "label", "N", "estimand",
                   "splitvar", "p.value", "surv", "A", "Subgrps",
                   "LCL0", "UCL0", "est0", "events", "prob.est",
-                  "x", "y"))
+                  "x", "y", "id", "crit_1", "crit_2",
+                  "est_plot", "lcl_plot", "ucl_plot", "is_overall",
+                  "Rules_N", "ci_label",
+                  "prob.est_1", "prob.est_2"))
 #' plot.PRISM
 #'
 #' Plots PRISM results. Options include "tree", "forest", "resample", and "PLE:waterfall".
@@ -57,7 +60,7 @@ globalVariables(c("Rules", "est", "LCL", "UCL", "PLE", "label", "N", "estimand",
 
 
 plot.PRISM = function(x, type="tree", target=NULL, grid.data=NULL, grid.thres=">0",
-                      prob.thres=NULL,
+                      prob.thres=">0",
                       tree.plots="outcome",
                       nudge_out=0.1, width_out=0.5,
                       nudge_dens=ifelse(tree.plots=="both", 0.3, 0.1),
@@ -89,28 +92,21 @@ plot.PRISM = function(x, type="tree", target=NULL, grid.data=NULL, grid.thres=">
     type = "forest"
   }
   if (type=="tree"){
-    if (!is.null(prob.thres)) {
-      thres.name <- paste("Prob(",prob.thres, ")", sep="")
-      x2 <- prob_calculator(x, thres=prob.thres)
-    }
-    if (is.null(prob.thres)) {
-      x2 <- x
-      prob.thres <- ifelse(x2$param=="cox", "<1", ">0")
-    }
-    cls <- class(x2$submod.fit$mod)
+
+    cls <- class(x$submod.fit$mod)
     if ("party" %in% cls) {
       # print(x2$param.dat)
-      res <- do.call("plot_tree", list(object=x2, plots=tree.plots,
+      res <- do.call("plot_tree", list(object = x, 
+                                       plots = tree.plots,
                                        prob.thres = prob.thres,
-                                       nudge_out=nudge_out, width_out=width_out,
-                                       nudge_dens=nudge_dens, width_dens=width_dens))
+                                       ...))
     }
     if (!("party" %in% cls)) {
       stop(paste("Tree Plots for non partykit models not currently supported."))
     }
   }
   if (type=="forest"){
-    res <- plot_forest(x)
+    res <- plot_forest(x, ...)
   }
   if (type=="resample") {
     res <- plot_resample(x=x, target=target)
@@ -122,9 +118,9 @@ plot.PRISM = function(x, type="tree", target=NULL, grid.data=NULL, grid.thres=">
 }
 ### Heat Map ###
 plot_heatmap <- function(x, grid.data, grid.thres) {
-  
+
   .Deprecated("plot_dependence")
-  
+
   if (is.null(x$ple.fit)) {
     stop("Heatmap requires ple model fit: Check ple argument")
   }
@@ -162,8 +158,7 @@ plot_heatmap <- function(x, grid.data, grid.thres) {
   X.grid = X.grid[,!(colnames(X.grid) %in% "counter")]
   ## Next, predict PLEs across grid ##
   grid.ple = predict(x, newdata = X.grid, type="ple")
-  grid.ple$ind.ple = eval(parse(text=paste("ifelse(grid.ple$PLE",
-                                           grid.thres, ", 1, 0)")))
+  grid.ple$ind.ple = .compare_thres(grid.ple$PLE, grid.thres)
   avg.ple = aggregate(grid.ple$PLE ~ counter.vec, FUN="mean")
   prob.ple = aggregate(grid.ple$ind.ple ~ counter.vec, FUN="mean")
   
@@ -171,13 +166,15 @@ plot_heatmap <- function(x, grid.data, grid.thres) {
   est.dat = data.frame(grid.data, est = avg.ple$`grid.ple$PLE`,
                        prob = prob.ple$`grid.ple$ind.ple`)
   res.est = ggplot2::ggplot(data = est.dat,
-                            aes_string(x=name.var1, y=name.var2, fill="est")) +
-    ggplot2::geom_tile() + 
+                            ggplot2::aes(x = .data[[name.var1]], y = .data[[name.var2]],
+                                         fill = .data[["est"]])) +
+    ggplot2::geom_tile() +
     ggplot2::labs(fill = "PLE") +
     ggplot2::scale_fill_gradient2(low="navy", mid="white", high="red")
-  res.prob = ggplot2::ggplot(data = est.dat, 
-                             aes_string(x=name.var1, y=name.var2, fill="prob")) +
-    ggplot2::geom_tile() + 
+  res.prob = ggplot2::ggplot(data = est.dat,
+                             ggplot2::aes(x = .data[[name.var1]], y = .data[[name.var2]],
+                                          fill = .data[["prob"]])) +
+    ggplot2::geom_tile() +
     ggplot2::labs(fill = paste("Prob(PLE", grid.thres, ")",sep="")) +
     ggplot2::scale_fill_gradient2(low="navy", mid="white", high="red",
                          midpoint=0.5)

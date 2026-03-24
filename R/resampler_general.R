@@ -20,10 +20,24 @@ resampler_general <- function(Y, A, X, fit, wrapper, list_args,
                            alpha.mat=NULL,
                            verbose=FALSE, ...) {
   
+  # fit=fit0
+  # wrapper="PRISM_train"
+  # list_args=list_args_R
+  # fixed_subs = "false"
+  # calibrate = FALSE 
+  # alpha.mat = NULL 
+  # verbose = TRUE
+  
   wrapper_fn <- get(wrapper, envir = parent.frame())
   
   alpha_ovrl <- list_args$alpha_ovrl
   alpha_s <- list_args$alpha_s
+  
+  # Initial Subgroups / mu_train #
+  Subgrps <- fit$Subgrps
+  mu_train <- fit$mu_train
+  mu_ind <- !is.null(mu_train)
+  mu_vec <- is.vector(mu_train)
   
   # Calibration alpha matrix? #
   if (is.null(alpha.mat)) {
@@ -60,12 +74,6 @@ resampler_general <- function(Y, A, X, fit, wrapper, list_args,
     folds <- CV_folds(n=n, R=R, strata=strata)
     calibrate <- FALSE
   }
-  
-  # Initial Subgroups / mu_train #
-  Subgrps <- fit$Subgrps
-  mu_train <- fit$mu_train
-  mu_ind <- !is.null(mu_train)
-  mu_vec <- is.vector(mu_train)
   
   # Original Data #
   trt_eff <- fit$trt_eff
@@ -123,6 +131,7 @@ resampler_general <- function(Y, A, X, fit, wrapper, list_args,
         }
       }
     }
+    list_args["mu_train"] <- list(mu_train_r)
     if (resample=="CV") {
       resamp.data <- obs.data[folds!=r,]
       test <- obs.data[folds==r,]
@@ -137,16 +146,15 @@ resampler_general <- function(Y, A, X, fit, wrapper, list_args,
     if (fam_check=="survival") { Y.R = Surv(Y.R[,1], Y.R[,2])  }
     
     # Fit the wrapper #
-    fit.r <- tryCatch(do.call(wrapper, 
-                              append(list(Y=Y.R, A=A.R, X=X.R, 
-                                          Xtest=Xtest.R, mu_train=mu_train_r),
+    fit.r <- tryCatch(do.call(wrapper,
+                              append(list(Y=Y.R, A=A.R, X=X.R,
+                                          Xtest=Xtest.R),
                                      list_args)),
                       error = function(e) as.character(e))
-    # print(paste("resample", r))
-    # print(fit.r)
 
     if (is.character(fit.r)) {
-      if (verbose) { message("fit error; ignoring resample")   }
+      if (r == 1) first_error <<- fit.r
+      if (verbose) { message(paste("fit error; ignoring resample:", fit.r))   }
       return(NULL)
     }
     Subgrps.R <- fit.r$Subgrps
@@ -232,7 +240,8 @@ resampler_general <- function(Y, A, X, fit, wrapper, list_args,
       if (numb_subs==1) {
         hold <- trt_eff.R[,c("estimand", "est", "SE", "bias")]
         est_resamp <- trt_eff[,c("Subgrps", "N", "estimand")]
-        est_resamp <- dplyr::left_join(est_resamp, hold, by = "estimand")
+        est_resamp <- dplyr::left_join(est_resamp, hold, by = "estimand",
+                                       relationship = "many-to-many")
         est_resamp <- data.frame(R=r, est_resamp)
       }
       # >1 Subgroups #
@@ -278,19 +287,24 @@ resampler_general <- function(Y, A, X, fit, wrapper, list_args,
     }
   }
   # Loop through resamples #
+  first_error <- NULL
   resamp.obj = lapply(1:R, looper, wrapper=wrapper_fn, resample=resample,
                       list_args=list_args,
-                      Xtest.R = Xtest.R, 
+                      Xtest.R = Xtest.R,
                       verbose = verbose, fixed_subs=fixed_subs,
                       combine=combine_use)
-  
-  if (any(sapply(resamp.obj, is.null))) {
-    resamp.obj <- resamp.obj[-which(sapply(resamp.obj, is.null))] # remove NULL elements
+
+  resamp.obj <- resamp.obj[!sapply(resamp.obj, is.null)]
+  if (length(resamp.obj) == 0) {
+    err_msg <- if (!is.null(first_error)) paste(" First error:", first_error) else ""
+    warning(paste0("All resamples failed. Returning original estimates.", err_msg))
+    return(list(resamp_dist = NULL, trt_eff_resamp = trt_eff,
+                resamp_subgrps = NULL))
   }
-  hold <- do.call(rbind, resamp.obj)
-  resamp_subgrps <- data.frame(id = obs.data$id, do.call(cbind, hold[,1]))
-  resamp_dist <- data.frame(do.call(rbind, hold[,2]))
-  resamp_calib <- do.call(rbind, hold[,3])
+  resamp_subgrps <- data.frame(id = obs.data$id,
+                               do.call(cbind, lapply(resamp.obj, `[[`, 1)))
+  resamp_dist <- data.frame(do.call(rbind, lapply(resamp.obj, `[[`, 2)))
+  resamp_calib <- do.call(rbind, lapply(resamp.obj, `[[`, 3))
   
   ## Resampling Metrics ##
   # Smoothed estimate (average across resamples), SE, pval #

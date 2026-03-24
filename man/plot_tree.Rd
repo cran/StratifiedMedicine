@@ -12,6 +12,8 @@ plot_tree(
   width_out = 0.5,
   nudge_dens = ifelse(plots == "both", 0.3, 0.1),
   width_dens = 0.5,
+  dens_title = NULL,
+  node_label = NULL,
   ...
 )
 }
@@ -43,6 +45,10 @@ tree structure is shown.}
 \item{nudge_dens}{Nudge tree density plot}
 
 \item{width_dens}{Width of density tree outcome plot}
+
+\item{dens_title}{Optional title for density plot. Default=NULL (uses estimand name).}
+
+\item{node_label}{Optional label for node point-estimate annotations. Default=NULL (uses estimand name).}
 
 \item{...}{Additional arguments (currently ignored).}
 }

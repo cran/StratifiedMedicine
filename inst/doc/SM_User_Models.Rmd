@@ -216,6 +216,11 @@ plot(res_user1, type="PLE:waterfall")
 plot(res_user1)
 ```
 
+A forest plot provides an alternative view of the subgroup-specific treatment estimates with readable splitting rules:
+```{r user_SM_forest, warnings=FALSE, message=FALSE, fig.width=10, fig.height=5}
+plot(res_user1, type="forest")
+```
+
 # Conclusion
 
 Overall, key tools of "StratifiedMedicine" are customizable, allowing for fast experimentation and improvement of individual steps. The main consideration for customizing the steps are certain required inputs/outputs.

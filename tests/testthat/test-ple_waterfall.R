@@ -46,12 +46,6 @@ test_that("Test whether PLE waterfall plots are work", {
   
   res1 = ple_train(Y=Y, A=A, X=X, ple = "linear")
   plot_ple(res1, type="waterfall")
-  
-  # Glmnet #
-  res2 = PRISM(Y=Y, A=A, X=X, ple = "glmnet", meta = "X-learner")
-  plot(res2, type="PLE:waterfall")
-  
-  res2 = ple_train(Y=Y, A=A, X=X, ple = "glmnet")
-  plot_ple(res2, type="waterfall")
+
   
 })

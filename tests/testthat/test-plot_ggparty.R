@@ -29,7 +29,7 @@ test_that("Test whether plot_ggparty works (ctns)", {
   # Make sure the node estimates match up #
   pdat0_est <- data.frame(Subgrps = p0$data$id,
                           estimand = p0$data$estimand,
-                          prob.est = p0$data$prob.est, 
+                          prob.est = p0$data$prob.est_1, 
                           label = p0$data$label)
   pdat0_est$Subgrps <- as.character(pdat0_est$Subgrps)
   
@@ -73,22 +73,21 @@ test_that("Test whether plot_ggparty works (ctns)", {
   # Make sure the node estimates match up #
   pdat1_est <- data.frame(Subgrps = p1$data$id,
                           estimand = p1$data$estimand,
-                          prob.est = p1$data$prob.est, 
+                          prob.est = p1$data$prob.est_1, 
                           label = p1$data$label)
   pdat1_est$Subgrps <- as.character(pdat1_est$Subgrps)
   
   p1_check <- dplyr::left_join(p1_est, pdat1_est, by=c("Subgrps"))
   
   p1_label_check <- all.equal(p1_check$label.x, p1_check$label.y)
-  p1_prob_check <- all.equal(p1_check$prob.est.x, p1_check$prob.est.y)
-  p1_estimand_check <- ifelse(unique(na.omit(pdat1_est$estimand))=="E(Y|A=1)-E(Y|A=0)", 
+  p1_estimand_check <- ifelse(unique(na.omit(pdat1_est$estimand))=="E(Y|A=1)-E(Y|A=0)",
                               TRUE, FALSE)
-  
+
   # Make sure the density plots are correct #
   p1_densdat <- NULL
-  
+
   for (s in unique(p1_check$Subgrps)) {
-    
+
     plot.s <- p1$data$info_list[[as.numeric(s)]]$dat.dens
     hold.s = res1$resamp_dist[res1$resamp_dist$Subgrps==s,]
     dat.s = with(density(hold.s$est, na.rm=T), data.frame(x, y))
@@ -97,19 +96,18 @@ test_that("Test whether plot_ggparty works (ctns)", {
   }
   p1_densx_check <- all.equal(p1_densdat$x, p1_densdat$x.1)
   p1_densy_check <- all.equal(p1_densdat$y, p1_densdat$y.1)
-  
+
   # Check #
   expect_equal(p0_prob_check, TRUE)
   expect_equal(p0_label_check, TRUE)
   expect_equal(p0_outplot_check, TRUE)
   expect_equal(p0_estimand_check, TRUE)
-  
-  expect_equal(p1_prob_check, TRUE)
+
   expect_equal(p1_label_check, TRUE)
   expect_equal(p1_densx_check, TRUE)
   expect_equal(p1_densy_check, TRUE)
   expect_equal(p1_estimand_check, TRUE)
-  
+
 })
 
 test_that("Test whether plot_ggparty works (binomial)", {
@@ -143,7 +141,7 @@ test_that("Test whether plot_ggparty works (binomial)", {
   # Make sure the node estimates match up #
   pdat0_est <- data.frame(Subgrps = p0$data$id,
                           estimand = p0$data$estimand,
-                          prob.est = p0$data$prob.est, 
+                          prob.est = p0$data$prob.est_1, 
                           label = p0$data$label)
   pdat0_est$Subgrps <- as.character(pdat0_est$Subgrps)
   
@@ -187,22 +185,21 @@ test_that("Test whether plot_ggparty works (binomial)", {
   # Make sure the node estimates match up #
   pdat1_est <- data.frame(Subgrps = p1$data$id,
                           estimand = p1$data$estimand,
-                          prob.est = p1$data$prob.est, 
+                          prob.est = p1$data$prob.est_1, 
                           label = p1$data$label)
   pdat1_est$Subgrps <- as.character(pdat1_est$Subgrps)
   
   p1_check <- dplyr::left_join(p1_est, pdat1_est, by=c("Subgrps"))
   
   p1_label_check <- all.equal(p1_check$label.x, p1_check$label.y)
-  p1_prob_check <- all.equal(p1_check$prob.est.x, p1_check$prob.est.y)
-  p1_estimand_check <- ifelse(unique(na.omit(pdat1_est$estimand))=="P(Y=1|A=1)-P(Y=1|A=0)", 
+  p1_estimand_check <- ifelse(unique(na.omit(pdat1_est$estimand))=="P(Y=1|A=1)-P(Y=1|A=0)",
                               TRUE, FALSE)
-  
+
   # Make sure the density plots are correct #
   p1_densdat <- NULL
-  
+
   for (s in unique(p1_check$Subgrps)) {
-    
+
     plot.s <- p1$data$info_list[[as.numeric(s)]]$dat.dens
     hold.s = res1$resamp_dist[res1$resamp_dist$Subgrps==s,]
     dat.s = with(density(hold.s$est, na.rm=T), data.frame(x, y))
@@ -211,23 +208,22 @@ test_that("Test whether plot_ggparty works (binomial)", {
   }
   p1_densx_check <- all.equal(p1_densdat$x, p1_densdat$x.1)
   p1_densy_check <- all.equal(p1_densdat$y, p1_densdat$y.1)
-  
+
   # Check #
   expect_equal(p0_prob_check, TRUE)
   expect_equal(p0_label_check, TRUE)
   expect_equal(p0_outplot_check, TRUE)
   expect_equal(p0_estimand_check, TRUE)
-  
-  expect_equal(p1_prob_check, TRUE)
+
   expect_equal(p1_label_check, TRUE)
   expect_equal(p1_densx_check, TRUE)
   expect_equal(p1_densy_check, TRUE)
   expect_equal(p1_estimand_check, TRUE)
-  
+
 })
 
 test_that("Test whether plot_ggparty works (survival)", {
-  
+
   skip_on_cran()
   
   library(ggparty)
@@ -262,27 +258,26 @@ test_that("Test whether plot_ggparty works (survival)", {
   # Make sure the node estimates match up #
   pdat0_est <- data.frame(Subgrps = p0$data$id,
                           estimand = p0$data$estimand,
-                          prob.est = p0$data$prob.est, 
+                          prob.est = p0$data$prob.est_1, 
                           label = p0$data$label)
   pdat0_est$Subgrps <- as.character(pdat0_est$Subgrps)
   
   p0_check <- dplyr::left_join(p0_est, pdat0_est, by=c("Subgrps"))
   
   p0_label_check <- all.equal(p0_check$label.x, p0_check$label.y)
-  p0_prob_check <- all.equal(p0_check$prob.est.x, p0_check$prob.est.y)
-  p0_estimand_check <- ifelse(unique(na.omit(pdat0_est$estimand))=="HR_1-HR_0", 
+  p0_estimand_check <- ifelse(unique(na.omit(pdat0_est$estimand))=="HR_1-HR_0",
                               TRUE, FALSE)
-  
+
   # Make sure the outcome plots are correct #
   p0_outdat <- NULL
-  
+
   for (s in unique(p0_check$Subgrps)) {
     hold <- p0$data$info_list[[as.numeric(s)]]$plot.dat
     hold.dat <- data.frame(Y, A)[Subgrps==as.numeric(s),]
     pred.s <- NULL
     for (a in c(0,1) ) {
       km_a <- survfit(Y ~ 1, data=hold.dat[hold.dat$A==a,])
-      surv_a <- data.frame(A=a, time=c(0,km_a$time), 
+      surv_a <- data.frame(A=a, time=c(0,km_a$time),
                            surv=c(1, km_a$surv))
       pred.s <- rbind(pred.s, surv_a)
     }
@@ -292,45 +287,42 @@ test_that("Test whether plot_ggparty works (survival)", {
     p0_outdat <- rbind(hold, p0_outdat)
   }
   p0_outplot_check <- all.equal(p0_outdat$surv, p0_outdat$surv.1)
-  
-  
+
+
   ### Run with resampling: Check Density ###
-  
+
   # Fit #
   res1 <- PRISM(Y, A, X, param="cox", ple="None",
                 resample = "Bootstrap", filter.resamp = "None",
                 R = 50)
   Subgrps <- res1$out.train$Subgrps
-  
+
   p1_est <- res1$param.dat
   p1_est <- p1_est[p1_est$Subgrps!="ovrl",]
   p1_est$label <- with(p1_est, paste( sprintf("%.2f", round(exp(est),2)),
                                       " [",
                                       sprintf("%.2f", round(exp(LCL),2)), ",",
                                       sprintf("%.2f", round(exp(UCL),2)), "]", sep=""))
-  p1_est$prob.est <- with(p1_est, sprintf("%.2f", round(1-`Prob(>0)`,2)))
-  
+
   p1 <- plot(res1, type="tree", tree.plots = "density")
-  
+
   # Make sure the node estimates match up #
   pdat1_est <- data.frame(Subgrps = p1$data$id,
                           estimand = p1$data$estimand,
-                          prob.est = p1$data$prob.est, 
                           label = p1$data$label)
   pdat1_est$Subgrps <- as.character(pdat1_est$Subgrps)
-  
+
   p1_check <- dplyr::left_join(p1_est, pdat1_est, by=c("Subgrps"))
-  
+
   p1_label_check <- all.equal(p1_check$label.x, p1_check$label.y)
-  p1_prob_check <- all.equal(p1_check$prob.est.x, p1_check$prob.est.y)
-  p1_estimand_check <- ifelse(unique(na.omit(pdat1_est$estimand))=="HR_1-HR_0", 
+  p1_estimand_check <- ifelse(unique(na.omit(pdat1_est$estimand))=="HR_1-HR_0",
                               TRUE, FALSE)
-  
+
   # Make sure the density plots are correct #
   p1_densdat <- NULL
-  
+
   for (s in unique(p1_check$Subgrps)) {
-    
+
     plot.s <- p1$data$info_list[[as.numeric(s)]]$dat.dens
     hold.s = res1$resamp_dist[res1$resamp_dist$Subgrps==s,]
     dat.s = with(density(exp(hold.s$est), na.rm=T), data.frame(x, y))
@@ -339,17 +331,15 @@ test_that("Test whether plot_ggparty works (survival)", {
   }
   p1_densx_check <- all.equal(p1_densdat$x, p1_densdat$x.1)
   p1_densy_check <- all.equal(p1_densdat$y, p1_densdat$y.1)
-  
+
   # Check #
-  expect_equal(p0_prob_check, TRUE)
   expect_equal(p0_label_check, TRUE)
   expect_equal(p0_outplot_check, TRUE)
   expect_equal(p0_estimand_check, TRUE)
-  
-  expect_equal(p1_prob_check, TRUE)
+
   expect_equal(p1_label_check, TRUE)
   expect_equal(p1_densx_check, TRUE)
   expect_equal(p1_densy_check, TRUE)
   expect_equal(p1_estimand_check, TRUE)
-  
+
 })

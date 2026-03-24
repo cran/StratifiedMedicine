@@ -73,10 +73,10 @@ plot_stability <- function(fit, type="density", display="instability") {
   res <- NULL
   if (type=="density") {
     caption_use <- "Note: Dashed lines correspond to average probability of switching to bootstrap subgroup"
-    res = ggplot2::ggplot(plot_dat, ggplot2::aes_string(x="est", fill="sub_b")) +
+    res = ggplot2::ggplot(plot_dat, ggplot2::aes(x=.data$est, fill=.data$sub_b)) +
       ggplot2::geom_density(alpha=0.30) +
-      ggplot2::geom_vline(data=mu_dat, ggplot2::aes_string(xintercept="est", color="sub_b"),
-                          linetype="dashed", size=1) + 
+      ggplot2::geom_vline(data=mu_dat, ggplot2::aes(xintercept=.data$est, color=.data$sub_b),
+                          linetype="dashed", linewidth=1) +
       ggplot2::facet_wrap(~sub_0) + 
       ggplot2::ggtitle(paste("Density Plot:", title, sep=" ")) +
       ggplot2::ylab("") + 

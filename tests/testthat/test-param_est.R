@@ -21,8 +21,8 @@ test_that("Test whether param_est works (ctns)", {
   
   for (param in params) {
     message(paste("Parameter Estimation", param))
-    res <- param_est(Y, A, X, param=param, mu_hat=mu_hat,
-                     Subgrps=Subgrps)
+    res <- suppressWarnings(param_est(Y, A, X, param=param, mu_hat=mu_hat,
+                     Subgrps=Subgrps))
     data_ind <- ifelse(is.data.frame(res), 1, 0)
     hold <- data.frame(param=param, data_ind=data_ind)
     res_dat <- rbind(res_dat, hold)
@@ -52,8 +52,8 @@ test_that("Test whether ple_train works (binomial)", {
   
   for (param in params) {
     message(paste("Parameter Estimation", param))
-    res <- param_est(Y, A, X, param=param, mu_hat=mu_hat,
-                     Subgrps=Subgrps)
+    res <- suppressWarnings(param_est(Y, A, X, param=param, mu_hat=mu_hat,
+                     Subgrps=Subgrps))
     data_ind <- ifelse(is.data.frame(res), 1, 0)
     hold <- data.frame(param=param, data_ind=data_ind)
     res_dat <- rbind(res_dat, hold)

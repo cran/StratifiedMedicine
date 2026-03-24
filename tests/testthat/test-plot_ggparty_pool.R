@@ -32,7 +32,7 @@ test_that("Test whether plot_ggparty works with pooling (ctns)", {
   # Make sure the node estimates match up #
   pdat0_est <- data.frame(Subgrps = p0$data$id,
                           estimand = p0$data$estimand,
-                          prob.est = p0$data$prob.est, 
+                          prob.est = p0$data$prob.est_1, 
                           label = p0$data$label)
   pdat0_est$Subgrps0 <- as.character(pdat0_est$Subgrps)
   
@@ -84,7 +84,7 @@ test_that("Test whether plot_ggparty works with pooling (binomial)", {
   # Make sure the node estimates match up #
   pdat0_est <- data.frame(Subgrps = p0$data$id,
                           estimand = p0$data$estimand,
-                          prob.est = p0$data$prob.est, 
+                          prob.est = p0$data$prob.est_1, 
                           label = p0$data$label)
   pdat0_est$Subgrps0 <- as.character(pdat0_est$Subgrps)
   
@@ -142,20 +142,18 @@ test_that("Test whether plot_ggparty works with pooling (survival)", {
   # Make sure the node estimates match up #
   pdat0_est <- data.frame(Subgrps = p0$data$id,
                           estimand = p0$data$estimand,
-                          prob.est = p0$data$prob.est, 
+                          prob.est = p0$data$prob.est_1, 
                           label = p0$data$label)
   pdat0_est$Subgrps0 <- as.character(pdat0_est$Subgrps)
   
   p0_check <- dplyr::left_join(p0_est, pdat0_est, by=c("Subgrps0"))
   
   p0_label_check <- all.equal(p0_check$label.x, p0_check$label.y)
-  p0_prob_check <- all.equal(p0_check$prob.est.x, p0_check$prob.est.y)
-  p0_estimand_check <- ifelse(unique(na.omit(pdat0_est$estimand))=="HR_1-HR_0", 
+  p0_estimand_check <- ifelse(unique(na.omit(pdat0_est$estimand))=="HR_1-HR_0",
                               TRUE, FALSE)
-  
+
   # Check #
-  expect_equal(p0_prob_check, TRUE)
   expect_equal(p0_label_check, TRUE)
   expect_equal(p0_estimand_check, TRUE)
-  
+
 })

@@ -23,16 +23,16 @@ plot_resample <- function(x, target=NULL) {
     plot.dat$estimand = "HR(A=1 vs A=0)" 
     t_name <- "HR(A=1 vs A=0)"
   }
-  res = ggplot2::ggplot(plot.dat, ggplot2::aes(est, fill=Rules)) + 
+  res = ggplot2::ggplot(plot.dat, ggplot2::aes(est, fill=Rules)) +
     ggplot2::geom_density(alpha=0.30) +
     ggplot2::xlab( paste("Bootstrap Estimates:", t_name)  ) +
     ggplot2::facet_wrap(~Rules) +
     ggplot2::ggtitle("Bootstrap Distribution of Overall/Subgroup Estimates")+
-    ggplot2::theme(plot.title=ggplot2::element_text(size=16,face="bold"),
+    ggplot2::theme_bw() +
+    ggplot2::theme(plot.title=ggplot2::element_text(size=14,face="bold"),
                    axis.text.y=ggplot2::element_blank(),
                    axis.ticks.y=ggplot2::element_blank(),
                    axis.text.x=ggplot2::element_text(face="bold"),
-                   axis.title=ggplot2::element_text(size=12,face="bold"))+
-    ggplot2::theme_bw()
+                   axis.title=ggplot2::element_text(size=12,face="bold"))
   return(res)
 }

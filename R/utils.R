@@ -1,4 +1,26 @@
-
+.extract_thres <- function(prob_thres) {
+  
+  dir <- substr(prob_thres, 1, 1)
+  thres <- substr(prob_thres, 2, nchar(prob_thres))
+  if (suppressWarnings(is.na(as.numeric(thres)))) {
+    thres <- substr(prob_thres, 3, nchar(prob_thres))
+  }
+  thres <- as.numeric(thres)
+  return(list(dir=dir, thres=thres))
+}
+# Safe threshold comparison (replaces eval(parse(text=...)) pattern)
+.compare_thres <- function(x, thres_string) {
+  parsed <- .extract_thres(thres_string)
+  op <- parsed$dir
+  val <- parsed$thres
+  # Handle two-char operators like ">=" or "<="
+  op2 <- substr(thres_string, 1, 2)
+  if (op2 == ">=") return(as.integer(x >= val))
+  if (op2 == "<=") return(as.integer(x <= val))
+  if (op == ">")   return(as.integer(x > val))
+  if (op == "<")   return(as.integer(x < val))
+  return(rep(0L, length(x)))
+}
 .add_trt_details <- function(Y, Subgrps, trt_dat, family) {
   
   if (!("Prob(>0)" %in% names(trt_dat))) {
@@ -68,7 +90,14 @@ summary_output_submod <- function(object, round_est=4, round_SE=4,
       out$`Variables that Define the Subgroups` <- paste(submod_vars, collapse=", ")
     }
   }
-  
+  # Subgroup Rules #
+  if (!is.null(object$Rules)) {
+    rules_display <- object$Rules
+    rules_display$Rules <- paste0("Node ", rules_display$Subgrps, ": ",
+                                  rules_display$Rules)
+    out$`Subgroup Definitions` <- rules_display$Rules
+  }
+
   if (!ind_pool) {
     out$`Treatment Effect Estimates (observed)` <- trt_eff_obs 
   }
@@ -139,6 +168,35 @@ getUsefulPredictors <- function(x) {
   varid <- unique(unlist(varid))
   names(partykit::data_party(x))[varid]
 }
+### Extract human-readable subgroup rules from a party tree ###
+#' @importFrom utils getFromNamespace
+extract_rules <- function(tree, digits = 3) {
+  if (is.null(tree) || !inherits(tree, "party")) return(NULL)
+  list_rules_fn <- tryCatch(
+    getFromNamespace(".list.rules.party", "partykit"),
+    error = function(e) NULL
+  )
+  if (is.null(list_rules_fn)) return(NULL)
+  rules_vec <- tryCatch(list_rules_fn(tree), error = function(e) NULL)
+  if (is.null(rules_vec) || length(rules_vec) == 0) return(NULL)
+  # Round numeric values (4+ decimal places) in rule strings;
+  # categorical labels (e.g. {a, b, c}) are left untouched.
+  rules_rounded <- as.character(rules_vec)
+  for (i in seq_along(rules_rounded)) {
+    m <- gregexpr("[0-9]+\\.[0-9]{4,}", rules_rounded[i], perl = TRUE)
+    nums <- regmatches(rules_rounded[i], m)[[1]]
+    if (length(nums) > 0) {
+      rounded <- formatC(round(as.numeric(nums), digits),
+                         digits = digits, format = "f")
+      for (j in seq_along(nums)) {
+        rules_rounded[i] <- sub(nums[j], rounded[j], rules_rounded[i], fixed = TRUE)
+      }
+    }
+  }
+  data.frame(Subgrps = names(rules_vec), Rules = rules_rounded,
+             stringsAsFactors = FALSE)
+}
+
 ## Extract summary statistics (linear regression: Y~A within subgroup) ##
 lm_stats = function(summ.fit, Subgrps, s, alpha, noA) {
   # Sample size #
@@ -383,9 +441,6 @@ resamp_metrics = function(trt_eff, resamp_dist, resamp_calib, resample) {
 wbreg <- function(y, x, start = NULL, weights = NULL, offset = NULL, ...) {
   survreg(y ~ 0 + x, weights = weights, dist = "weibull", ...)
 }
-logLik.survreg <- function(object, ...) {
-  structure(object$loglik[2], df = sum(object$df), class = "logLik")
-}
 aft_mavg <- function(y, x, start = NULL, weights = NULL, offset=NULL,
                       ..., 
                       estfun = FALSE, object = FALSE) {
@@ -456,7 +511,8 @@ aft_mavg <- function(y, x, start = NULL, weights = NULL, offset=NULL,
               object = if (object) obj else NULL)
   return(out)
 }
-predict.aftmavg <- function(object, newdata) {
+#' @exportS3Method
+predict.aftmavg <- function(object, newdata, ...) {
   
   dist.vec <- object$wdat$dist
   pred <- 0
@@ -536,15 +592,15 @@ rmst_calc <- function(time, surv, tau) {
   return(rmst)
 }
 
-## Probability Calculator (input desired threshold and PRISM.fit) ##
+# Probability Calculator (input desired threshold and PRISM.fit)
 prob_calculator <- function(fit, thres=">0") {
   
   param.dat <- fit$param.dat
   thres.name <- paste("Prob(",thres, ")", sep="")
-  # Stop if threshold has already been computed #
-  if (thres.name %in% colnames(param.dat)) {
-    return(fit)
-  }
+  # # Stop if threshold has already been computed #
+  # if (thres.name %in% colnames(param.dat)) {
+  #   return(fit)
+  # }
   dir <- substr(thres, 1, 1)
   numb <- substr(thres, 2, nchar(thres))
   if (suppressWarnings(is.na(as.numeric(numb)))) {
@@ -585,13 +641,13 @@ prob_calculator <- function(fit, thres=">0") {
   # Resampling #
   if (resamp %in% c("Bootstrap", "Permutation")) {
     rdist <- fit$resamp_dist
-    rdist$prob.est = eval(parse(text=paste("ifelse(rdist$est",thres, ", 1, 0)")))
+    rdist$prob.est = .compare_thres(rdist$est, thres)
     prob.dat <- aggregate(prob.est ~ Subgrps*estimand, data=rdist, FUN="mean")
     if (fit$param=="param_cox") {
       prob.dat$estimand = gsub("logHR", "HR", prob.dat$estimand)
     }
     param.dat <- param.dat[,!(colnames(param.dat) %in% c("prob.est"))]
-    param.dat <- left_join(param.dat, prob.dat, by=c("Subgrps", "estimand"))
+    param.dat <- dplyr::left_join(param.dat, prob.dat, by=c("Subgrps", "estimand"))
   }
   # Create column name #
   # colnames(param.dat)[which(colnames(param.dat)=="prob.est")] <- thres.name

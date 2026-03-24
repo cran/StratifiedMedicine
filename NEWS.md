@@ -1,3 +1,6 @@
+# StratifiedMedicine 1.0.6
+* For filter_glmnet, added functionality for tuning the "alpha" argument.
+
 # StratifiedMedicine 1.0.5
 * Enhanced summary() function for both PRISM and submod_train
 * Added plot_tree for submod_train function.

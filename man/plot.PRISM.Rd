@@ -10,7 +10,7 @@
   target = NULL,
   grid.data = NULL,
   grid.thres = ">0",
-  prob.thres = NULL,
+  prob.thres = ">0",
   tree.plots = "outcome",
   nudge_out = 0.1,
   width_out = 0.5,

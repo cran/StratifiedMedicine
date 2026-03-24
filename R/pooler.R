@@ -45,8 +45,7 @@
   if (pool %in% c("trteff", "trteff_boot")) {
     
     if (is.null(trt_eff_pool$dopt)) {
-      trt_eff_pool$dopt = eval(parse(text = paste("ifelse(trt_eff_pool$est",
-                                                  delta, ", 1, 0)")))
+      trt_eff_pool$dopt = .compare_thres(trt_eff_pool$est, delta)
       trt_eff_pool$dopt <- ifelse(trt_eff_pool$dopt==1, "dopt=1", "dopt=0")
     }
     trt_assign <- data.frame(Subgrps=as.character(fit$Subgrps))
@@ -127,8 +126,7 @@
   # Set up data #
   mu_hat <- fit$mu_train
   ple_name <- colnames(mu_hat)[grepl("diff", colnames(mu_hat))]
-  ind_ple <- eval(parse(text=paste(paste("ifelse(mu_hat$",ple_name,sep=""),
-                                   delta, ", 1, 0)")))
+  ind_ple <- .compare_thres(mu_hat[[ple_name]], delta)
   # ind_ple <- factor(ind_ple, levels = c("0", "1"))
   
   # Threshold as numeric #

@@ -1,4 +1,4 @@
-## ---- include = FALSE---------------------------------------------------------
+## ----include = FALSE----------------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
@@ -95,7 +95,10 @@ kable( summ.table, caption = "Default PRISM Configurations (Without Treatment, A
 # PRISM Default: filter_glmnet, ranger, lmtree, dr #
 res0 = PRISM(Y=Y, A=A, X=X)
 summary(res0)
-plot(res0) # same as plot(res0, type="tree")
+plot(res0, prob.thres = c(">0", ">0.10")) # same as plot(res0, type="tree")
+
+## ----default_ctns_forest, warning=FALSE, fig.width=10, fig.height=5-----------
+plot(res0, type="forest")
 
 ## ----default_ctns_prog, warning=FALSE-----------------------------------------
 # PRISM Default: filter_glmnet, ranger, ctree, param_lm #
@@ -126,10 +129,10 @@ table(res0$out.test$Subgrps)
 res0$param.dat
 
 ## ----default_hyper, eval=FALSE------------------------------------------------
-#  res_new_hyper = PRISM(Y=Y, A=A, X=X, filter.hyper = list(lambda="lambda.1se"),
-#                        ple.hyper = list(min.node.pct=0.05),
-#                        submod.hyper = list(minsize=200, maxdepth=3), verbose=FALSE)
-#  summary(res_new_hyper)
+# res_new_hyper = PRISM(Y=Y, A=A, X=X, filter.hyper = list(lambda="lambda.1se"),
+#                       ple.hyper = list(min.node.pct=0.05),
+#                       submod.hyper = list(minsize=200, maxdepth=3), verbose=FALSE)
+# summary(res_new_hyper)
 
 ## ----default_binary-----------------------------------------------------------
 dat_bin = generate_subgrp_data(family="binomial", seed = 5558)
@@ -153,11 +156,14 @@ A = rbinom(n = dim(X)[1], size=1, prob=0.5)
 # Default: glmnet ==> ranger (estimates patient-level RMST(1 vs 0) ==> mob_weib (MOB with Weibull) ==> cox (Cox regression)
 res_weib = PRISM(Y=Y, A=A, X=X)
 summary(res_weib)
-plot(res_weib)
+plot(res_weib, prob.thres=c(">1"))
+
+## ----default_surv_forest, warning=FALSE, fig.width=10, fig.height=5-----------
+plot(res_weib, type="forest")
 
 ## ----default_boot, warning=FALSE, message=FALSE, eval=FALSE-------------------
-#  res_boot = PRISM(Y=Y, A=A, X=X, resample = "Bootstrap", R=50, ple="None")
-#  summary(res_boot)
-#  # Plot of distributions #
-#  plot(res_boot, type="resample", estimand = "HR(A=1 vs A=0)")+geom_vline(xintercept = 1)
+# res_boot = PRISM(Y=Y, A=A, X=X, resample = "Bootstrap", R=50, ple="None")
+# summary(res_boot)
+# # Plot of distributions #
+# plot(res_boot, type="resample", estimand = "HR(A=1 vs A=0)")+geom_vline(xintercept = 1)
 

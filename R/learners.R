@@ -3,7 +3,10 @@
 #### Filter (reduce covariate space) ####
 
 filter_glmnet = function(Y, A, X, lambda="lambda.min", family="gaussian",
-                         interaction=FALSE, ...){
+                         alpha = 0.5,
+                         interaction=FALSE,
+                         stratify = ifelse(interaction, "trt", "no"),
+                         R=10, ...) {
   
   ## Model Matrix #
   fact.vars <- sapply(X, is.factor)
@@ -14,23 +17,53 @@ filter_glmnet = function(Y, A, X, lambda="lambda.min", family="gaussian",
   W <- X.mat
   intercept <- TRUE
   
-  if (interaction){
+  if (interaction & !is.null(A)){
     A.mat <- model.matrix(~., data=data.frame(A))[,-1]
     X_inter <- X.mat*A.mat
     colnames(X_inter) <- paste(colnames(X.mat), "_trtA", sep="")
-    # W = cbind(X.mat, A, X_inter)
-    W <- cbind(X.mat, X_inter)
+    W = cbind(X.mat, A=A.mat, X_inter)
+    # W <- cbind(X.mat, X_inter)
   }
   # Center and Scale #
   n <- dim(W)[1]
   W_centered <- apply(W, 2, function(x) x - mean(x))
   Ws <- apply(W_centered, 2, function(x) x / sqrt(sum(x^2) / n))
   
+  # Fold IDs #
+  if (stratify=="no" | is.null(A)) {
+    foldid <- CV_folds(n=n, R=R, strata=NULL)
+  } else if (stratify=="trt") {
+    foldid <- CV_folds(n=n, R=R, strata=A)
+  }
+  
   # Fit Elastic Net #
   if (family=="survival") { family = "cox" }
-  mod <- suppressWarnings( 
-    glmnet::cv.glmnet(x = Ws, y = Y, nlambda = 100, alpha=0.5, family=family,
-              intercept=intercept) )
+  if (length(alpha)==1) {
+    
+    alpha_use <- alpha
+    mod <- suppressWarnings( 
+      glmnet::cv.glmnet(x = Ws, y = Y, nlambda = 100, alpha=alpha_use, family=family,
+                        intercept=intercept, foldid = foldid) )
+    
+  } else if (length(alpha)>1) {
+    
+    looper_alpha <- function(aa) {
+      mod_aa <- suppressWarnings( 
+        glmnet::cv.glmnet(x = Ws, y = Y, nlambda = 100, alpha=aa, family=family,
+                          intercept=intercept, foldid = foldid) )
+      lamb <- mod_aa[[lambda]]
+      loss <- mod_aa$cvm[mod_aa$glmnet.fit$lambda==lamb]
+      hold <- data.frame(alpha=aa, lamb=lamb, loss=loss)
+      return(hold)
+    }
+    res.alpha <- lapply(alpha, looper_alpha)
+    res.alpha <- data.frame(do.call(rbind, res.alpha))
+    alpha_use <- res.alpha[which(res.alpha$loss==min(res.alpha$loss)),]$alpha
+    
+    mod <- suppressWarnings( 
+      glmnet::cv.glmnet(x = Ws, y = Y, nlambda = 100, alpha=alpha_use, family=family,
+                        intercept=intercept, foldid = foldid) )
+  }
   
   ### Extract filtered variable based on lambda ###
   VI <- coef(mod, s = lambda)[,1]
@@ -45,6 +78,8 @@ filter_glmnet = function(Y, A, X, lambda="lambda.min", family="gaussian",
   # Store selected lambda in model #
   mod$sel.lambda <- lambda
   mod$sel.family <- family
+  mod$sel.alpha <- alpha_use
+  mod$interaction <- interaction
   # Return model fit, filter.vars #
   return(list(mod=mod, filter.vars=filter.vars))
 }
@@ -60,7 +95,7 @@ plot_vimp_glmnet <- function(mod) {
                        est = as.numeric(VI))
   VI.dat <- VI.dat[VI.dat$est!=0,]
   VI.dat$rank <- 1
-  vimp.plt <- ggplot2::ggplot(VI.dat, aes(x=reorder(.data$covariate, abs(.data$est)), 
+  vimp.plt <- ggplot2::ggplot(VI.dat, ggplot2::aes(x=reorder(.data$covariate, abs(.data$est)), 
                                           y=.data$est)) + 
     ggplot2::geom_bar(stat="identity")+
     ggplot2::ylab("Beta (standardized)")+
@@ -177,9 +212,9 @@ plot_vimp_ranger <- function(mod, top_n=NULL) {
     VI.dat <- VI.dat[VI.dat$rank<=top_n,]
     plot.title <- paste(plot.title, " [Top ", top_n, "]", sep="")
   }
-  vimp.plt <- ggplot2::ggplot(VI.dat, aes(x=reorder(.data$Variables,-.data$pval), 
+  vimp.plt <- ggplot2::ggplot(VI.dat, ggplot2::aes(x=reorder(.data$Variables,-.data$pval),
                                           y=.data$est, ymin=.data$LCL, ymax=.data$UCL)) +
-    ggplot2::geom_errorbar(width=.1)+geom_point()+
+    ggplot2::geom_errorbar(width=.1) + ggplot2::geom_point() +
     ggplot2::geom_hline(yintercept=0, color="red")+
     ggplot2::ylab(y.label)+
     ggplot2::xlab("Variable")+
@@ -281,11 +316,11 @@ ple_linear <- function(Y, X, Xtest=NULL, family="gaussian", ...) {
   return(res)
 }
 ## GLNET ##
-ple_glmnet <- function(Y, X, family="gaussian", 
+ple_glmnet <- function(Y, X, family="gaussian",
                         lambda="lambda.min", ...) {
-  
+
   .Deprecated("ranger, linear, or bart")
-  
+
   W = model.matrix(~., data = X)[,-1]
   if (family=="survival") { family = "cox"  }
   mod <- glmnet::cv.glmnet(x = W, y = Y, alpha=0.5, family=family)
@@ -366,7 +401,7 @@ submod_rpart <- function(Y, X, minbucket = floor(dim(X)[1]*0.10),
     return(list(Subgrps=Subgrps, pred=pred))
   }
   ## Return Results ##
-  res <- list(mod=mod, pred.fun=pred.fun)
+  res <- list(mod=mod, pred.fun=pred.fun, Rules=extract_rules(mod))
   class(res) <- "submod_rpart"
   return(res)
 }
@@ -398,7 +433,7 @@ submod_lmtree <- function(Y, A, X, alpha=0.10,
     }
     return(list(Subgrps=Subgrps, pred=pred))
   }
-  res <- list(mod=mod, pred.fun=pred.fun)
+  res <- list(mod=mod, pred.fun=pred.fun, Rules=extract_rules(mod))
   class(res) <- "submod_lmtree"
   ## Return Results ##
   return(res)
@@ -431,7 +466,7 @@ submod_glmtree <- function(Y, A, X,
     }
     return(list(Subgrps=Subgrps, pred=pred))
   }
-  res <- list(mod=mod, pred.fun=pred.fun)
+  res <- list(mod=mod, pred.fun=pred.fun, Rules=extract_rules(mod))
   class(res) <- "submod_glmtree"
   ## Return Results ##
   return(  res )
@@ -457,7 +492,7 @@ submod_ctree <- function(Y, A, X, mu_train, alpha=0.10,
     }
     return( list(Subgrps=Subgrps, pred=pred) )
   }
-  res <- list(mod=mod, pred.fun=pred.fun)
+  res <- list(mod=mod, pred.fun=pred.fun, Rules=extract_rules(mod))
   class(res) <- "submod_ctree"
   ## Return Results ##
   return(  res )
@@ -472,7 +507,7 @@ submod_otr <- function(Y, A, X, mu_train, alpha=0.10,
   
   ## Set up data ##
   mu_train$PLE <- mu_train[[ple_name]]
-  ind_PLE <- eval(parse(text=paste("ifelse(mu_train$PLE", delta, ", 1, 0)")))
+  ind_PLE <- .compare_thres(mu_train$PLE, delta)
 
   # Threshold as numeric #
   delta.num <- substr(delta, 2, nchar(delta))
@@ -499,7 +534,7 @@ submod_otr <- function(Y, A, X, mu_train, alpha=0.10,
     return( list(Subgrps=Subgrps, pred=pred) )
   }
   ## Return Results ##
-  res <- list(mod=mod, pred.fun=pred.fun)
+  res <- list(mod=mod, pred.fun=pred.fun, Rules=extract_rules(mod))
   class(res) <- "submod_otr"
   return(res)
 }
@@ -532,7 +567,7 @@ submod_mob_weib <- function(Y, A, X, alpha=0.10,
     }
     return(list(Subgrps=Subgrps, pred=pred))
   }
-  res <- list(mod=mod, pred.fun=pred.fun)
+  res <- list(mod=mod, pred.fun=pred.fun, Rules=extract_rules(mod))
   class(res) <- "submod_weibull"
   ## Return Results ##
   return(res)
@@ -569,7 +604,7 @@ submod_mob_aft <- function(Y, A, X, alpha=0.10,
     }
     return(list(Subgrps=Subgrps, pred=pred))
   }
-  res <- list(mod=mod, pred.fun=pred.fun)
+  res <- list(mod=mod, pred.fun=pred.fun, Rules=extract_rules(mod))
   class(res) <- "submod_mob_aft"
   ## Return Results ##
   return(res)
@@ -697,50 +732,10 @@ param_gcomp <- function(Y, A, mu_hat, alpha, all_A=FALSE, ...) {
   return(summ)                 
 }
 ## Average patient-level estimates ##
+## Legacy alias for param_gcomp ##
 param_ple <- function(Y, A, mu_hat, alpha, all_A=FALSE, ...) {
-  
-  .Deprecated("gcomp")
-  
-  n <- length(Y)
-  if (is.null(A)) {
-    est = mean(mu_hat[,1])
-    SE = sqrt( n^(-2)*sum((est-Y)^2) ) 
-    LCL = est-qnorm( (1-alpha/2) )*SE
-    UCL = est+qnorm( (1-alpha/2) )*SE
-    pval = 2*pnorm(-abs(est/SE))
-    summ = data.frame(N = n, estimand = "E(Y)", est, SE, LCL, UCL, pval)
-  }
-  if (!is.null(A)) {
-    A_lvls <- unique(A)[order(unique(A))]
-    estimands <- c(paste("mu", A=A_lvls[1], sep="_"),
-                   paste("mu", A=A_lvls[2], sep="_"))
-    estimands <- c(estimands, paste(estimands[2], "-", estimands[1], sep=""))
-    mu_A0 = estimands[1]
-    mu_A1 = estimands[2]
-    A_ind <- ifelse(A==A_lvls[2], 1, 0)
-    pi_hat <- mu_hat[[paste("pi", A_lvls[2], sep="_")]]
-    # EIF ###
-    eif.0 = ( (1-A_ind)*Y + (A_ind-pi_hat)*mu_hat[,mu_A0] ) / (1-pi_hat)
-    eif.1 = ( A_ind*Y - (A_ind-pi_hat)*mu_hat[,mu_A1])/ pi_hat
-    eif = eif.1 - eif.0
-    # Double robust estimator: Average eifs #
-    est = c( mean(eif.0, na.rm=TRUE), 
-             mean(eif.1, na.rm=TRUE),
-             mean(mu_hat[,mu_A1]-mu_hat[,mu_A0], na.rm=TRUE))
-    # EIF for variance estimate #
-    SE = sqrt( n^(-2) * c( sum( (eif.0-est[1])^2 ),
-                           sum( (eif.1-est[2])^2 ),
-                           sum( (eif-est[3])^2 ) ) )
-    LCL = est-qnorm((1-alpha/2))*SE
-    UCL = est+qnorm((1-alpha/2))*SE
-    pval = 2*pnorm(-abs(est/SE))
-    summ = data.frame(N = n, estimand = estimands,
-                      est, SE, LCL, UCL, pval)
-    if (!all_A) {
-      summ <- summ[summ$estimand==estimands[3],] 
-    }
-  }
-  return(summ)                 
+  .Deprecated("param_gcomp")
+  param_gcomp(Y=Y, A=A, mu_hat=mu_hat, alpha=alpha, all_A=all_A, ...)
 }
 ## Cox Regression ##
 param_cox <- function(Y, A, alpha, ...) {

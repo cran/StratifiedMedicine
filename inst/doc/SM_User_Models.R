@@ -1,4 +1,4 @@
-## ---- include = FALSE---------------------------------------------------------
+## ----include = FALSE----------------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
@@ -168,4 +168,7 @@ res_user1 = PRISM(Y=Y, A=A, X=X, family="gaussian", filter="filter_lasso",
 res_user1$filter.vars
 plot(res_user1, type="PLE:waterfall")
 plot(res_user1)
+
+## ----user_SM_forest, warnings=FALSE, message=FALSE, fig.width=10, fig.height=5----
+plot(res_user1, type="forest")
 

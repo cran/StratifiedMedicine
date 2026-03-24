@@ -168,7 +168,12 @@ For continuous outcome data (family="gaussian"), the default PRISM configuration
 # PRISM Default: filter_glmnet, ranger, lmtree, dr #
 res0 = PRISM(Y=Y, A=A, X=X)
 summary(res0)
-plot(res0) # same as plot(res0, type="tree")
+plot(res0, prob.thres = c(">0", ">0.10")) # same as plot(res0, type="tree")
+```
+
+An alternative to the tree plot is the forest plot, which shows subgroup-specific treatment effect estimates with human-readable splitting rules alongside confidence intervals:
+```{r default_ctns_forest, warning=FALSE, fig.width=10, fig.height=5}
+plot(res0, type="forest")
 ```
 We can also directly look for prognostic effects by specifying omitting A (treatment) from PRISM (or submod_train):
 
@@ -247,7 +252,12 @@ A = rbinom(n = dim(X)[1], size=1, prob=0.5)
 # Default: glmnet ==> ranger (estimates patient-level RMST(1 vs 0) ==> mob_weib (MOB with Weibull) ==> cox (Cox regression)
 res_weib = PRISM(Y=Y, A=A, X=X)
 summary(res_weib)
-plot(res_weib)
+plot(res_weib, prob.thres=c(">1"))
+```
+
+The forest plot for survival data (with hazard ratios) uses a reference line at 1:
+```{r default_surv_forest, warning=FALSE, fig.width=10, fig.height=5}
+plot(res_weib, type="forest")
 ```
 
 # Resampling

@@ -88,11 +88,11 @@ param_est <- function(Y, A, X, param, mu_hat=NULL, Subgrps,
     param.dat = rbind(param.dat, param_ovrl)
   }
   if (numb_subs>1) {
-    if (param %in% c("param_dr", "param_ple")) {
+    if (param %in% c("param_dr", "param_ple", "param_gcomp")) {
       param_ovrl <- looper(S_levels, alpha=alpha_ovrl, mu_hat=mu_hat,
                            sname = "ovrl")
     }
-    if (!(param %in% c("param_dr", "param_ple"))) {
+    if (!(param %in% c("param_dr", "param_ple", "param_gcomp"))) {
       param_ovrl <- NULL
       for (e in unique(param.dat$estimand)){
         hold <- param_combine(param.dat = param.dat[param.dat$estimand==e,],

@@ -20,8 +20,9 @@
 #'  Journal of Business & Economic Statistics, to appear. (2017).
 #' }
 #' @export
-#' @importFrom ggplot2 ggplot aes_string aes geom_tile ggtitle geom_rug 
+#' @importFrom ggplot2 ggplot aes geom_tile ggtitle geom_rug
 #' @importFrom ggplot2 scale_fill_gradient2 facet_wrap
+#' @importFrom rlang .data
 #' 
 #' @examples
 #' \donttest{
@@ -171,13 +172,13 @@ plot_dependence <- function(object, X=NULL, target=NULL, vars,
     grid.ple$PLE <- grid.ple[[ple_name]]
     avg.ple = aggregate(grid.ple$PLE ~ counter.vec, FUN="mean")
     est.dat = data.frame(grid.data, est = avg.ple$`grid.ple$PLE`)
-    res.est = ggplot2::ggplot(data = est.dat, 
-                              ggplot2::aes_string(x=name.var1, y="est")) + 
-      ggplot2::geom_point() + ggplot2::geom_smooth(se=FALSE) + 
+    res.est = ggplot2::ggplot(data = est.dat,
+                              ggplot2::aes(x = .data[[name.var1]], y = .data[["est"]])) +
+      ggplot2::geom_point() + ggplot2::geom_smooth(se=FALSE) +
       ggplot2::xlab(name.var1) +
-      ggplot2::ylab(y.label)
-      ggplot2::geom_rug(data=out.train, 
-                        ggplot2::aes_string(name.var1), sides="b", inherit.aes = F)
+      ggplot2::ylab(y.label) +
+      ggplot2::geom_rug(data=out.train,
+                        ggplot2::aes(x = .data[[name.var1]]), sides="b", inherit.aes = FALSE)
     res <- res.est
   }
   # Heat Map (2 or 3 variables) #
@@ -188,12 +189,14 @@ plot_dependence <- function(object, X=NULL, target=NULL, vars,
     avg.ple = aggregate(grid.ple$PLE ~ counter.vec, FUN="mean")
     ### Plot Heat-map ###
     est.dat = data.frame(grid.data, est = avg.ple$`grid.ple$PLE`)
-    res.est = ggplot2::ggplot(data = est.dat, 
-                              ggplot2::aes_string(x=name.var1, y=name.var2, fill="est")) +
-      ggplot2::geom_tile() + ggplot2::labs(fill = "est") + 
+    res.est = ggplot2::ggplot(data = est.dat,
+                              ggplot2::aes(x = .data[[name.var1]], y = .data[[name.var2]],
+                                           fill = .data[["est"]])) +
+      ggplot2::geom_tile() + ggplot2::labs(fill = "est") +
       ggplot2::ggtitle(paste("Heat Map Estimates:", ple.label))+
-      ggplot2::geom_rug(data=out.train, 
-                        ggplot2::aes_string(name.var1, name.var2), inherit.aes = F) + 
+      ggplot2::geom_rug(data=out.train,
+                        ggplot2::aes(x = .data[[name.var1]], y = .data[[name.var2]]),
+                        inherit.aes = FALSE) +
       ggplot2::scale_fill_gradient2(low="navy", mid="white", high="red")
     # Lastly, if there were 3 input variables, facet_wrap by third variable #
     if (dim(grid.data)[2]==3){

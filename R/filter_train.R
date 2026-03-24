@@ -26,11 +26,14 @@
 #' elastic net for family="gaussian","binomial", "survival" respectively. Default is to 
 #' regress Y~ENET(X) with hyper-parameters:
 #' 
-#' hyper = list(lambda="lambda.min", family="gaussian",interaction=FALSE))
+#' hyper = list(lambda="lambda.min", family="gaussian", alpha=0.5, interaction=FALSE))
 #' 
-#' If interaction=TRUE, then Y~ENET(X,X*A), and variables with estimated coefficients of 
+#' If alpha is a vector of values (ex: alpha = c(0, 0.5, 1)), then the 10-fold CV
+#' will be used to select the optimal alpha across the range of provided values. 
+#' 
+#' If interaction=TRUE, then Y~ENET(X,A, X*A), and variables with estimated coefficients of 
 #' zero in both the main effects (X) and treatment-interactions (X*A) are filtered. This 
-#' aims to find variables that are prognostic and/or predictive. 
+#' aims to find variables that are prognostic and/or predictive.
 #' 
 #' 
 #' 2. \strong{ranger}: Wrapper function for the function "ranger" (ranger R package) to calculate

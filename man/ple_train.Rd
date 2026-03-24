@@ -117,8 +117,10 @@ mod2 = ple_train(Y=Y, A=A, X=X, Xtest=X, ple="ranger", method="T-learner")
 summary(mod2$mu_train)
 
 
-mod3 = ple_train(Y=Y, A=A, X=X, Xtest=X, ple="bart", method="X-learner")
-summary(mod3$mu_train)
+if (requireNamespace("BART", quietly = TRUE)) {
+  mod3 = ple_train(Y=Y, A=A, X=X, Xtest=X, ple="bart", method="X-learner")
+  summary(mod3$mu_train)
+}
 }
 
 
